@@ -1,0 +1,69 @@
+{
+  "schema_version": 1,
+  "runs": [
+    {
+      "id": "discovery",
+      "config": "configs/discovery.json",
+      "status": "configuration selection",
+      "cohort": "30 separate discovery users",
+      "reported_role": "method-configuration selection"
+    },
+    {
+      "id": "evaluation37",
+      "config": "configs/evaluation37.json",
+      "status": "frozen leakage-controlled evaluation",
+      "cohort": "37 previously unanalysed eligible users",
+      "reported_role": "main cross-method evaluation"
+    },
+    {
+      "id": "expanded46",
+      "config": "configs/expanded46.json",
+      "status": "overlapping expanded cohort sensitivity analysis",
+      "cohort": "37 evaluation users plus 9 previously analysed users",
+      "reported_role": "expanded-cohort robustness only"
+    },
+    {
+      "id": "ambiguity",
+      "config": "configs/ambiguity.json",
+      "status": "post-hoc descriptive diagnostic",
+      "reported_role": "training-only destination ambiguity and heterogeneity"
+    },
+    {
+      "id": "geometric_distance",
+      "config": "configs/geometric_distance.json",
+      "status": "post-hoc sensitivity analysis",
+      "reported_role": "geometric distance-function sensitivity"
+    },
+    {
+      "id": "matched_ablation",
+      "config": "configs/matched_ablation.json",
+      "status": "post-hoc diagnostic",
+      "reported_role": "saved bootstrap plan and legacy-order audit"
+    },
+    {
+      "id": "tie_sensitivity",
+      "config": "configs/tie_sensitivity.json",
+      "status": "post-hoc sensitivity analysis",
+      "reported_role": "canonical deterministic matched-grid predictions and tie sensitivity"
+    },
+    {
+      "id": "matched_familiarity",
+      "config": "configs/matched_familiarity.json",
+      "status": "post-hoc descriptive diagnostic",
+      "reported_role": "matched effects stratified by prefix familiarity"
+    },
+    {
+      "id": "matched_diagnostics",
+      "config": "configs/matched_diagnostics.json",
+      "status": "post-hoc descriptive diagnostic",
+      "reported_role": "ambiguity, history-size, and user-level matched effects"
+    },
+    {
+      "id": "matched_robustness",
+      "config": "configs/matched_robustness.json",
+      "status": "post-hoc sensitivity analysis",
+      "reported_role": "alternative observation definitions, quality, D200, and expanded cohort"
+    }
+  ],
+  "implementation_note": "Run identity is represented by an immutable configuration and manifest. Shared implementations reside under src/destination_prediction; historical copies are not duplicated."
+}

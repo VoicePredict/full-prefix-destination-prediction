@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "personal-trajectory-endpoint-prediction"
+version = "1.0.0"
+description = "Reproducibility artifact for leakage-controlled personal trajectory endpoint prediction"
+requires-python = ">=3.10,<3.11"
+authors = [
+  {name = "Anastasiia Sapeha"},
+  {name = "Kirill Karpov"},
+  {name = "Subashkumar Rajanayagam"},
+  {name = "Ibrahim Kovan"},
+  {name = "Dmitry Kachan"},
+  {name = "Eduard Siemens"},
+]
+dependencies = [
+  "numpy==2.0.2",
+  "pandas==2.3.3",
+  "scikit-learn==1.6.1",
+  "scipy==1.13.1",
+  "torch==2.12.1+cpu",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

@@ -1,0 +1,18 @@
+{
+  "prediction_source": "tie_sensitivity",
+  "familiarity_source": "evaluation37",
+  "variant": "id_top10",
+  "full_method": "grid_full_prefix",
+  "ablation_method": "grid_last_state_only",
+  "observation_ratios": [0.25, 0.50, 0.66, 0.75],
+  "bootstrap": {
+    "replicates": 10000,
+    "seed": 20260729,
+    "confidence_level": 0.95
+  },
+  "parameter_rationale": {
+    "familiarity": "The no-analogue indicator and its Q90 threshold are reused unchanged from the prior training-only familiarity analysis.",
+    "tie_rule": "The deterministic trajectory-ID top-10 rule is fixed before this stratified analysis and does not depend on endpoint outcomes.",
+    "interpretation": "Intervals are unadjusted post-hoc descriptive summaries and do not test a prespecified interaction."
+  }
+}

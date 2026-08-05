@@ -1,0 +1,132 @@
+{
+  "experiment_name": "source_faithful_multiratio_destination_comparison",
+  "dataset": {
+    "raw_root": "data/Geolife",
+    "trajectory_glob": "Data/*/Trajectory/*.plt",
+    "trajectory_unit": "one original GeoLife PLT file",
+    "manual_segmentation": false,
+    "min_points_per_trajectory": 10,
+    "min_duration_seconds": 300,
+    "max_points_after_even_downsampling": 200,
+    "exclude_entire_trajectory_if_any_label_is_non_ground": true,
+    "non_ground_modes": ["airplane", "boat", "ferry", "ship", "helicopter"],
+    "min_eligible_trajectories_per_user": 40,
+    "cohort_users": 30,
+    "cohort_sampling": "equal allocation over tertiles of eligible trajectory count",
+    "cohort_seed": 20260723
+  },
+  "task": {
+    "observation_ratios": [0.25, 0.50, 0.66, 0.75],
+    "outer_train_fraction": 0.75,
+    "inner_validation_fraction_of_outer_train": 0.20,
+    "split": "chronological within user",
+    "destination_clustering": "personal training-endpoint DBSCAN",
+    "primary_dbscan_eps_m": 200.0,
+    "dbscan_min_samples": 1,
+    "destination_representative": "observed training medoid",
+    "primary_support_quantile": 0.90
+  },
+  "selection": {
+    "scope": "inner fitting and chronological validation only",
+    "primary_metric": "mean user-macro Hit@R90 over all four observation ratios",
+    "tie_breakers": [
+      "mean user-macro destination accuracy within 1000 m",
+      "mean user-macro median endpoint error"
+    ],
+    "test_labels_used_for_configuration_selection": false,
+    "selection_seed": 20260723,
+    "final_neural_seeds": [20260723, 20260724, 20260725, 20260726, 20260727]
+  },
+  "sweeps": {
+    "geometric_retrieval": {
+      "resample_points": [16, 32, 64]
+    },
+    "probabilistic_grid_pattern_retrieval": {
+      "cell_size_m": [200.0, 400.0, 800.0],
+      "emission_sigma_cells": [1.0, 1.5, 2.5],
+      "posterior_top_k": [5, 10, 20],
+      "alignment_states": 32
+    },
+    "tsmini_inspired_retrieval": {
+      "sequence_embedding_dim": [64, 128],
+      "trajectory_distance_normalizer_m": [1000.0, 5000.0],
+      "epoch_budgets": [5, 10, 15],
+      "target_resample_points": 32,
+      "cellspace_buffer_m": 500.0,
+      "batch_size": 64,
+      "learning_rate": 0.002,
+      "weight_decay": 0.00001,
+      "ranking_k": 10,
+      "ranking_loss_weight": 0.8,
+      "weighted_mse_loss_weight": 0.2,
+      "public_architecture": {
+        "convolution_channels": 64,
+        "convolution_hidden_dim": 16,
+        "convolution_kernel_size": 3,
+        "convolution_stride": 1,
+        "attention_heads": 4,
+        "attention_layers": 1,
+        "transformer_hidden_dim": 512,
+        "attention_dropout": 0.1
+      }
+    },
+    "bigru_destination_classifier": {
+      "hidden_dim": [32, 64],
+      "direction": ["uni", "bi"],
+      "epoch_budgets": [10, 20, 30],
+      "user_embedding_dim": 8,
+      "layers": 1,
+      "dropout": 0.15,
+      "learning_rate": 0.003,
+      "weight_decay": 0.0005,
+      "batch_size": 64,
+      "gradient_norm_clip": 1.0
+    }
+  },
+  "baselines": [
+    "most_frequent_personal_destination",
+    "nearest_known_destination_to_current_point",
+    "last_observed_point",
+    "current_position_only_personal_retrieval"
+  ],
+  "evaluation": {
+    "support_quantiles": [0.80, 0.90, 0.95],
+    "fixed_radius_m": [200.0],
+    "dbscan_eps_sensitivity_m": [100.0, 200.0, 300.0],
+    "point_thresholds_m": [200.0, 1000.0],
+    "primary_aggregation": "user macro",
+    "secondary_aggregation": "trip weighted",
+    "bootstrap": {
+      "design": "paired hierarchical user-then-trip bootstrap",
+      "replicates": 10000,
+      "seed": 20260723,
+      "confidence_level": 0.95
+    },
+    "quality_sensitivity": {
+      "maximum_recording_gap_seconds": 3600,
+      "maximum_implied_ground_speed_mps": 100.0,
+      "require_strictly_increasing_timestamps": true
+    }
+  },
+  "parameter_rationale": {
+    "source_unit": "GeoLife distributes GPS recordings as separate PLT files. Each file is retained as the trajectory unit; no additional journey segmentation is introduced.",
+    "trip_filter": "Ten valid points and five minutes ensure that the earliest 25% prefix contains at least two observations and that a destination task is not evaluated on very short recording fragments.",
+    "whole_trip_mode_filter": "Transport labels describe intervals rather than files. Removing labelled rows would crop an original trajectory, so any explicitly non-ground overlap excludes the complete PLT file; unknown and all labelled ground modes are retained.",
+    "user_eligibility": "Forty eligible trajectories guarantee at least ten temporally later outer-test trajectories before rounding, which supports user-level rate estimation.",
+    "cohort_size": "Thirty users provide more than twice the previous 13-user cohort while keeping the complete four-ratio, multi-seed neural comparison computationally reproducible.",
+    "cohort_sampling": "Equal sampling from trajectory-count tertiles prevents the cohort from being dominated by either sparse or exceptionally prolific recorders. The fixed seed is applied before any destination endpoint or prediction result is examined.",
+    "downsampling": "Even downsampling to at most 200 points preserves both endpoints, limits sampling-density effects, and bounds the memory and alignment cost identically for all methods.",
+    "observation_ratios": "The ratios represent early, midpoint, the historically used two-thirds condition, and late observation; all were fixed before validation and are aggregated for model selection.",
+    "chronological_split": "The 75/25 outer split evaluates future recordings from each user, and the final 20% of the outer history provides a temporally later inner validation period without exposing outer-test endpoints.",
+    "dbscan_eps": "Two hundred metres is used only as a local connectivity scale for training endpoints and matches the strict point-error reference; it is not imposed as the size of every destination region. Sensitivity at 100 and 300 m is reported.",
+    "support_quantiles": "Training-only within-cluster quantiles describe empirically observed destination extent. Q80, Q90, and Q95 are all reported so conclusions cannot depend on Q90 alone; singleton radii remain zero and are complemented by fixed-200-m results.",
+    "neural_seeds": "Five consecutive prespecified seeds expose stochastic training variability separately from case-sampling uncertainty.",
+    "grid_pattern_alignment_states": "All probabilistic grid-pattern prefixes are represented by 32 equally spaced alignment states, the midpoint of the geometric 16/32/64 grid, to bound the same computational comparison for every user; cell scale, emission width, and posterior breadth are selected on validation data.",
+    "tsmini_fixed_architecture": "Convolutional and transformer constants are copied from the public TSMini reference configuration. Only embedding dimension, distance normalization, and epoch budget are swept; the official weighted-MSE plus kNN-guided LambdaLoss objective is retained.",
+    "tsmini_target_resampling": "Thirty-two arc-length positions are used to form the conventional prefix-distance supervision because this is the central member of the prespecified 16/32/64 geometric resolution grid.",
+    "tsmini_cellspace_buffer": "The 500 m buffer is the public TSMini reference preprocessing value and prevents boundary-normalization degeneracy; it is derived around training coordinates only.",
+    "neural_optimization": "Learning rates, weight decay, batch sizes, dropout, user-embedding width, ranking k, and the 0.2/0.8 TSMini loss mixture follow the public/reference implementations used by the representative methods. Epoch budgets and structural dimensions are selected by the common validation metric. Unit gradient clipping is a numerical safeguard and failed non-finite runs are rejected.",
+    "quality_sensitivity": "The primary analysis preserves official PLT units. A separate non-selective sensitivity excludes complete trajectories with a recording gap over one hour, non-increasing timestamps, or implied speed above 100 m/s; 100 m/s is above ordinary ground-transport operation, and one hour distinguishes a recording interruption from the within-trip sampling intervals typical of GeoLife.",
+    "bootstrap_replicates": "Ten thousand paired replicates are used for stable percentile intervals; convergence is checked against the first five thousand replicates."
+  }
+}

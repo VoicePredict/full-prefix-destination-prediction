@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "checks": {
+    "run_completed": true,
+    "users_37": true,
+    "trajectories_1475": true,
+    "prediction_rows": true,
+    "tie_summary_rows": true,
+    "bootstrap_rows": true,
+    "legacy_audit_complete": true,
+    "ordered_intervals": true,
+    "saved_plan_reused": true
+  },
+  "legacy_exact_matches": 11800,
+  "legacy_expected": 11800
+}

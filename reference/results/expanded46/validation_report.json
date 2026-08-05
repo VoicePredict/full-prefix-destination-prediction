@@ -1,0 +1,21 @@
+{
+  "status": "passed",
+  "users": 46,
+  "trips": 11485,
+  "test_trips": 2888,
+  "expanded_cohort_disjoint_from_discovery": true,
+  "checks": {
+    "non_neural": {
+      "rows": 69312,
+      "unique_cases": 2888
+    },
+    "bigru": {
+      "rows": 57760,
+      "unique_cases": 2888
+    },
+    "tsmini": {
+      "rows": 57760,
+      "unique_cases": 2888
+    }
+  }
+}

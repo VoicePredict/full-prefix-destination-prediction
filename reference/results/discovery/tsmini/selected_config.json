@@ -1,0 +1,12 @@
+{
+  "config_id": "e64_d5000_epochs15",
+  "embedding_dim": 64,
+  "normalizer_m": 5000.0,
+  "epoch_budget": 15,
+  "macro_hit_r90": 0.41450341201152247,
+  "macro_within_1000m": 0.5763880612523885,
+  "macro_user_median_error_m": 12248.21734514796,
+  "selection_seed": 20260723,
+  "selection_metric": "mean user-macro Hit@R90 over all four observation ratios",
+  "outer_test_read": false
+}

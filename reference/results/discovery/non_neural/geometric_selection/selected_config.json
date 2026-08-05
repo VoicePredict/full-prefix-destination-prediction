@@ -1,0 +1,16 @@
+{
+  "config_id": "points_16",
+  "resample_points": 16.0,
+  "macro_hit_r90": 0.4068732657834541,
+  "macro_within_1000m": 0.5891324853368841,
+  "macro_user_median_error_m": 11919.331352357372,
+  "family": "geometric_retrieval",
+  "selection_metric": "mean user-macro Hit@R90 over all four observation ratios",
+  "selection_ratios": [
+    0.25,
+    0.5,
+    0.66,
+    0.75
+  ],
+  "outer_test_read": false
+}

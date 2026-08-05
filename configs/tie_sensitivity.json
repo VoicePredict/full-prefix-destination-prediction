@@ -1,0 +1,21 @@
+{
+  "source_experiment": "matched_ablation",
+  "observation_ratios": [0.25, 0.50, 0.66, 0.75],
+  "full_method": "grid_full_prefix",
+  "ablation_method": "grid_last_state_only",
+  "variants": [
+    {"name": "legacy_top10", "top_k": 10, "tie_rule": "legacy"},
+    {"name": "id_top10", "top_k": 10, "tie_rule": "trajectory_id"},
+    {"name": "inclusive_top10", "top_k": 10, "tie_rule": "include_boundary"},
+    {"name": "id_top5", "top_k": 5, "tie_rule": "trajectory_id"},
+    {"name": "id_top20", "top_k": 20, "tie_rule": "trajectory_id"}
+  ],
+  "distance_tolerance": 1e-12,
+  "parameter_rationale": {
+    "legacy": "This variant reproduces the saved post-hoc matched ablation and is retained only as an audit reference.",
+    "trajectory_id": "Equal-distance candidates are ordered lexicographically by their immutable source trajectory identifier, providing a deterministic outcome-independent rule.",
+    "include_boundary": "Every candidate tied at the kth distance is retained, removing dependence on arbitrary ordering at the truncation boundary.",
+    "top_k": "The discovery sweep considered pools of 5, 10, and 20 and selected 10. The two remaining prespecified pool sizes are reused as sensitivity values rather than selected from evaluation outcomes.",
+    "bootstrap": "The exact 10000-replicate user-then-trajectory resample plan saved by the matched-grid experiment is reused for every variant."
+  }
+}

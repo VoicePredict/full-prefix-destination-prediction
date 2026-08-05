@@ -1,0 +1,50 @@
+{
+  "source_experiments": {
+    "discovery": "discovery",
+    "held_out": "evaluation37"
+  },
+  "observation_ratios": [
+    0.25,
+    0.5,
+    0.66,
+    0.75
+  ],
+  "catalog_eps_m": 200.0,
+  "support_quantile": 0.9,
+  "ambiguity": {
+    "primary_neighbors": 10,
+    "sensitivity_neighbors": [
+      5,
+      20
+    ],
+    "bin_definition": "ratio-specific entropy tertiles estimated on the 30-user discovery test cohort",
+    "entropy_logarithm": "natural"
+  },
+  "history_size": {
+    "bin_feature": "training_trajectories",
+    "bin_definition": "tertiles estimated across users in the 30-user discovery cohort"
+  },
+  "bootstrap": {
+    "replicates": 10000,
+    "seed": 20260728,
+    "confidence_level": 0.95
+  },
+  "focal_methods": {
+    "full_prefix": "probabilistic_grid_pattern_retrieval",
+    "current_only": "current_position_only_personal_retrieval"
+  },
+  "reported_methods": [
+    "probabilistic_grid_pattern_retrieval",
+    "geometric_retrieval",
+    "tsmini",
+    "bigru",
+    "current_position_only_personal_retrieval",
+    "most_frequent_personal_destination"
+  ],
+  "parameter_rationale": {
+    "neighbors": "k=10 is the primary local-history neighbourhood; k=5 and k=20 are prespecified half/double sensitivity values. No k is selected from held-out performance.",
+    "ambiguity_bins": "Discovery-derived ratio-specific tertiles give interpretable low, medium, and high strata without using held-out outcome values.",
+    "history_bins": "Discovery-derived user tertiles avoid choosing held-out cut points after inspecting method effects.",
+    "bootstrap": "The replicate count matches the primary experiment; the seed is fixed before the new analyses are run."
+  }
+}

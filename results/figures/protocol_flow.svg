@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="930" height="245" viewBox="0 0 930 245">
+<rect width="100%" height="100%" fill="white"/>
+<rect x="20" y="86" width="120" height="58" rx="7" fill="#F2F2F2" stroke="#555555" stroke-width="1.2"/>
+<text x="80.00" y="111.50" text-anchor="middle" font-size="11" fill="#222222">Eligible users</text>
+<text x="80.00" y="126.50" text-anchor="middle" font-size="11" fill="#222222">n = 76</text>
+<line x1="140.00" y1="115.00" x2="185.00" y2="45.00" stroke="#555555" stroke-width="1.4"/>
+<polygon points="185.00,45.00 177.98,48.81 184.45,52.97" fill="#555555"/>
+<line x1="140.00" y1="115.00" x2="185.00" y2="115.00" stroke="#555555" stroke-width="1.4"/>
+<polygon points="185.00,115.00 178.00,111.15 178.00,118.85" fill="#555555"/>
+<line x1="140.00" y1="115.00" x2="185.00" y2="183.00" stroke="#555555" stroke-width="1.4"/>
+<polygon points="185.00,183.00 184.35,175.04 177.93,179.29" fill="#555555"/>
+<rect x="185" y="15" width="145" height="60" rx="7" fill="#DDEBF7" stroke="#0072B2" stroke-width="1.2"/>
+<text x="257.50" y="34.00" text-anchor="middle" font-size="11" fill="#222222">Discovery cohort</text>
+<text x="257.50" y="49.00" text-anchor="middle" font-size="11" fill="#222222">30 users</text>
+<text x="257.50" y="64.00" text-anchor="middle" font-size="11" fill="#222222">4,543 trajectories</text>
+<rect x="185" y="85" width="145" height="60" rx="7" fill="#F7E6D5" stroke="#D55E00" stroke-width="1.2"/>
+<text x="257.50" y="104.00" text-anchor="middle" font-size="11" fill="#222222">Earlier preliminary</text>
+<text x="257.50" y="119.00" text-anchor="middle" font-size="11" fill="#222222">9 users</text>
+<text x="257.50" y="134.00" text-anchor="middle" font-size="11" fill="#222222">excluded from evaluation</text>
+<rect x="185" y="153" width="145" height="60" rx="7" fill="#DFF0E8" stroke="#009E73" stroke-width="1.2"/>
+<text x="257.50" y="172.00" text-anchor="middle" font-size="11" fill="#222222">Final evaluation</text>
+<text x="257.50" y="187.00" text-anchor="middle" font-size="11" fill="#222222">37 users</text>
+<text x="257.50" y="202.00" text-anchor="middle" font-size="11" fill="#222222">5,845 trajectories</text>
+<line x1="330.00" y1="45.00" x2="380.00" y2="45.00" stroke="#555555" stroke-width="1.4"/>
+<polygon points="380.00,45.00 373.00,41.15 373.00,48.85" fill="#555555"/>
+<rect x="380" y="15" width="150" height="60" rx="7" fill="#DDEBF7" stroke="#0072B2" stroke-width="1.2"/>
+<text x="455.00" y="41.50" text-anchor="middle" font-size="11" fill="#222222">Selection partitions</text>
+<text x="455.00" y="56.50" text-anchor="middle" font-size="11" fill="#222222">2,712 fit; 682 validation</text>
+<line x1="530.00" y1="45.00" x2="580.00" y2="45.00" stroke="#555555" stroke-width="1.4"/>
+<polygon points="580.00,45.00 573.00,41.15 573.00,48.85" fill="#555555"/>
+<rect x="580" y="15" width="150" height="60" rx="7" fill="#DDEBF7" stroke="#0072B2" stroke-width="1.2"/>
+<text x="655.00" y="41.50" text-anchor="middle" font-size="11" fill="#222222">Frozen configurations</text>
+<text x="655.00" y="56.50" text-anchor="middle" font-size="11" fill="#222222">and prespecified settings</text>
+<line x1="655.00" y1="75.00" x2="655.00" y2="118.00" stroke="#555555" stroke-width="1.4"/>
+<line x1="655.00" y1="118.00" x2="455.00" y2="118.00" stroke="#555555" stroke-width="1.4"/>
+<line x1="455.00" y1="118.00" x2="455.00" y2="153.00" stroke="#555555" stroke-width="1.4"/>
+<polygon points="455.00,153.00 458.85,146.00 451.15,146.00" fill="#555555"/>
+<line x1="330.00" y1="183.00" x2="380.00" y2="183.00" stroke="#555555" stroke-width="1.4"/>
+<polygon points="380.00,183.00 373.00,179.15 373.00,186.85" fill="#555555"/>
+<rect x="380" y="153" width="150" height="60" rx="7" fill="#DFF0E8" stroke="#009E73" stroke-width="1.2"/>
+<text x="455.00" y="172.00" text-anchor="middle" font-size="11" fill="#222222">Earlier 75% history</text>
+<text x="455.00" y="187.00" text-anchor="middle" font-size="11" fill="#222222">4,370 trajectories</text>
+<text x="455.00" y="202.00" text-anchor="middle" font-size="11" fill="#222222">personal fitting</text>
+<line x1="530.00" y1="183.00" x2="580.00" y2="183.00" stroke="#555555" stroke-width="1.4"/>
+<polygon points="580.00,183.00 573.00,179.15 573.00,186.85" fill="#555555"/>
+<rect x="580" y="153" width="150" height="60" rx="7" fill="#DFF0E8" stroke="#009E73" stroke-width="1.2"/>
+<text x="655.00" y="172.00" text-anchor="middle" font-size="11" fill="#222222">Later 25% test</text>
+<text x="655.00" y="187.00" text-anchor="middle" font-size="11" fill="#222222">1,475 trajectories</text>
+<text x="655.00" y="202.00" text-anchor="middle" font-size="11" fill="#222222">predict before labels</text>
+<line x1="730.00" y1="183.00" x2="775.00" y2="183.00" stroke="#555555" stroke-width="1.4"/>
+<polygon points="775.00,183.00 768.00,179.15 768.00,186.85" fill="#555555"/>
+<rect x="775" y="153" width="135" height="60" rx="7" fill="#F2F2F2" stroke="#555555" stroke-width="1.2"/>
+<text x="842.50" y="179.50" text-anchor="middle" font-size="11" fill="#222222">Labels revealed</text>
+<text x="842.50" y="194.50" text-anchor="middle" font-size="11" fill="#222222">paired analysis</text>
+<text x="455.00" y="91.00" text-anchor="middle" font-size="10" fill="#555555">1,149 discovery-test trajectories excluded from selection</text>
+<text x="465.00" y="239.00" text-anchor="middle" font-size="11" fill="#555555">No evaluation trajectory or label enters configuration selection</text>
+</svg>

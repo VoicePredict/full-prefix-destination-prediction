@@ -1,0 +1,14 @@
+{
+  "status": "completed",
+  "users": 37,
+  "trajectories": 1475,
+  "ratios": [
+    0.25,
+    0.5,
+    0.66,
+    0.75
+  ],
+  "familiarity_definition_reused": true,
+  "held_out_outcomes_used_to_define_strata": false,
+  "interpretation": "post-hoc descriptive diagnostic"
+}

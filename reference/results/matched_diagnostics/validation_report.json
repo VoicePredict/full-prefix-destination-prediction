@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "checks": {
+    "run_completed": true,
+    "users_37": true,
+    "effect_rows": true,
+    "ambiguity_rows": true,
+    "history_rows": true,
+    "correlation_rows": true,
+    "deterministic_variant": true
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "primary_estimand": "user-macro Hit@R90 with uncovered cases counted as errors",
+  "primary_contrast": "paired difference in mean user-macro Hit@R90 across the four prespecified observation ratios",
+  "principal_methods": [
+    "geometric_retrieval",
+    "probabilistic_grid_pattern_retrieval",
+    "tsmini",
+    "bigru"
+  ],
+  "baseline_methods": [
+    "most_frequent_personal_destination",
+    "nearest_known_destination_to_current_point",
+    "last_observed_point",
+    "current_position_only_personal_retrieval"
+  ],
+  "observation_ratios": [
+    0.25,
+    0.5,
+    0.66,
+    0.75
+  ],
+  "catalog_eps_sensitivity_m": [
+    100.0,
+    200.0,
+    300.0
+  ],
+  "support_quantiles": [
+    0.8,
+    0.9,
+    0.95
+  ],
+  "neural_seed_handling": "metrics are reported per seed and as equal-weight seed mean and SD; case bootstrap uses per-case seed means",
+  "bootstrap": {
+    "design": "paired hierarchical user-then-trip bootstrap",
+    "replicates": 10000,
+    "seed": 20260723,
+    "confidence_level": 0.95
+  },
+  "bootstrap_convergence": {
+    "maximum_endpoint_shift_5000_vs_10000": 0.002853253612007556
+  },
+  "test_trips": 1475,
+  "quality_sensitivity_test_trips": 978,
+  "quality_sensitivity_definition": {
+    "maximum_recording_gap_seconds": 3600,
+    "maximum_implied_ground_speed_mps": 100.0,
+    "require_strictly_increasing_timestamps": true
+  },
+  "users": 37
+}

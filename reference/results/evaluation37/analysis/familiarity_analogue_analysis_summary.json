@@ -1,0 +1,42 @@
+{
+  "status": "completed",
+  "primary_destination_popularity_definition": "A test destination is popular_modal when it lies inside a training-only personal R90 support region whose cluster has the maximum outer-training endpoint support for that user. Tied maxima are retained.",
+  "destination_popularity_strata": [
+    "popular_modal",
+    "other_repeated",
+    "known_singleton",
+    "outside_training_r90"
+  ],
+  "prefix_analogue_definition": "For each user and observation ratio, 32-point arc-length prefix distance is compared with the training leave-one-out nearest-neighbour distribution. No close train analogue means that the test nearest-neighbour distance exceeds the selected training-only quantile.",
+  "analogue_resample_points": 32,
+  "analogue_threshold_quantiles": [
+    0.8,
+    0.9,
+    0.95
+  ],
+  "primary_analogue_threshold_quantile": 0.9,
+  "bootstrap": {
+    "design": "paired hierarchical user-then-trip bootstrap within stratum",
+    "replicates": 10000,
+    "seed": 20260723,
+    "confidence_level": 0.95
+  },
+  "test_trips": 1475,
+  "ratios": [
+    0.25,
+    0.5,
+    0.66,
+    0.75
+  ],
+  "destination_popularity_counts": {
+    "other_repeated": 386,
+    "outside_training_r90": 578,
+    "popular_modal": 511
+  },
+  "no_close_train_analogue_counts_q90": {
+    "0.25": 197,
+    "0.50": 213,
+    "0.66": 212,
+    "0.75": 216
+  }
+}

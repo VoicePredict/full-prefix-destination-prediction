@@ -1,0 +1,12 @@
+{
+  "status": "passed",
+  "checks": {
+    "run_completed": true,
+    "users_37": true,
+    "trajectories_1475": true,
+    "complete_cases": true,
+    "two_strata_four_ratios": true,
+    "labels_training_only": true,
+    "ordered_intervals": true
+  }
+}

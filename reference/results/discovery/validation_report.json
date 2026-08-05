@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "users": 30,
+  "trips": 4543,
+  "test_trips": 1149,
+  "checks": {
+    "non_neural": {
+      "rows": 27576,
+      "unique_cases": 1149
+    },
+    "bigru": {
+      "rows": 22980,
+      "unique_cases": 1149
+    },
+    "tsmini": {
+      "rows": 22980,
+      "unique_cases": 1149
+    }
+  }
+}

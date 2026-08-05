@@ -1,0 +1,54 @@
+{
+  "artifact_version": "1.0.0",
+  "manuscript_title": "When Does Full-Prefix Geometry Matter for Personal Trajectory Endpoint Prediction? A Leakage-Controlled Multi-Ratio Evaluation",
+  "dataset": {
+    "source_users": 182,
+    "source_plt_files": 18670,
+    "eligible_whole_trajectories": 17352,
+    "eligible_users": 76,
+    "evaluation_users": 37,
+    "evaluation_trajectories": 5845,
+    "fit_trajectories": 3497,
+    "validation_trajectories": 873,
+    "test_trajectories": 1475
+  },
+  "main_user_macro_hit_r90_percent": {
+    "probabilistic_grid_pattern_retrieval": [42.27, 43.41, 45.55, 46.80],
+    "grid_last_state_only": [36.42, 38.50, 46.14, 48.18],
+    "bigru": [38.05, 42.47, 44.57, 45.24],
+    "geometric_retrieval": [39.59, 40.46, 42.82, 45.28],
+    "tsmini": [35.61, 39.53, 42.71, 43.77],
+    "current_position_only_personal_retrieval": [30.99, 34.69, 42.50, 44.28],
+    "most_frequent_personal_destination": [33.95, 33.95, 33.95, 33.95],
+    "nearest_known_destination_to_current_point": [8.97, 13.42, 19.41, 26.64]
+  },
+  "matched_full_minus_last_percent_points": {
+    "0.25": [5.86, 2.23, 9.80],
+    "0.50": [4.91, 0.57, 9.28],
+    "0.66": [-0.59, -3.31, 2.08],
+    "0.75": [-1.38, -4.30, 0.94],
+    "mean": [2.20, 0.05, 4.34],
+    "75_minus_25": [-7.23, -12.52, -2.52]
+  },
+  "ambiguity_mean_entropy_nats": {
+    "5": [0.936, 0.876, 0.765, 0.681],
+    "10": [1.222, 1.149, 1.010, 0.935],
+    "20": [1.471, 1.414, 1.248, 1.143]
+  },
+  "tie_stage_contrast_percent_points": {
+    "id_top10": [-7.23, -12.52, -2.52],
+    "inclusive_top10": [-5.54, -10.21, -1.28],
+    "id_top5": [-5.43, -11.33, 0.46],
+    "id_top20": [-6.82, -11.29, -2.76]
+  },
+  "alternative_observation_stage_contrast_percent_points": {
+    "point_count": [-7.23, -12.52, -2.52],
+    "elapsed_time": [-3.91, -9.16, 1.20],
+    "cumulative_distance": [-2.84, -8.54, 2.94]
+  },
+  "matched_familiarity_case_counts": {
+    "analogue_present": [1278, 1262, 1263, 1259],
+    "no_close_analogue": [197, 213, 212, 216]
+  }
+}
+

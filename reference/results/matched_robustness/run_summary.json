@@ -1,0 +1,11 @@
+{
+  "status": "completed",
+  "held_out_users": 37,
+  "held_out_trajectories": 1475,
+  "expanded_users": 46,
+  "expanded_trajectories": 2888,
+  "canonical_point_count_matches": 11800,
+  "canonical_point_count_expected": 11800,
+  "bootstrap_replicates": 10000,
+  "deterministic_tie_rule": true
+}

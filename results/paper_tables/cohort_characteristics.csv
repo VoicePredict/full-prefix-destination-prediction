@@ -1,0 +1,10 @@
+characteristic,discovery,evaluation,unit
+users,30,37,count
+recorded_trajectories,4543,5845,count
+median_trajectories_per_user,112.5,94.0,trajectories
+median_user_level_duration,82.7,62.6,minutes
+median_user_level_distance,11.55,11.56,kilometres
+median_regions_per_user,22,18,regions
+user_macro_r90_coverage,54.7,59.7,percent
+singleton_regions,78.6,76.8,percent
+

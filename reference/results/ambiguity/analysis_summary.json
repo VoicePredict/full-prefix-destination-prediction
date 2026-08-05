@@ -1,0 +1,20 @@
+{
+  "status": "completed",
+  "discovery_users": 30,
+  "held_out_users": 37,
+  "held_out_test_trajectories": 1475,
+  "observation_ratios": [
+    0.25,
+    0.5,
+    0.66,
+    0.75
+  ],
+  "primary_ambiguity_neighbors": 10,
+  "sensitivity_ambiguity_neighbors": [
+    5,
+    20
+  ],
+  "bootstrap_replicates": 10000,
+  "test_outcomes_used_to_define_ambiguity": false,
+  "held_out_outcomes_used_to_define_stratum_thresholds": false
+}

@@ -1,0 +1,7 @@
+analysis,metric,quantity,first_method,second_method,ratio_or_change,observed,ci_low,ci_high
+held_out_point_count,hit_r90_all,paired_difference,grid_full_prefix,grid_last_state_only,0.25,5.856155897692094,2.232483071654326,9.800445788765304
+held_out_point_count,hit_r90_all,paired_difference,grid_full_prefix,grid_last_state_only,0.50,4.9099645153072355,0.5724100834687218,9.278910369472658
+held_out_point_count,hit_r90_all,paired_difference,grid_full_prefix,grid_last_state_only,0.66,-0.587092853194382,-3.3132266131633146,2.0762029121813117
+held_out_point_count,hit_r90_all,paired_difference,grid_full_prefix,grid_last_state_only,0.75,-1.3774380283244791,-4.302596132646764,0.9436506104672
+held_out_point_count,hit_r90_all,mean_difference,grid_full_prefix,grid_last_state_only,mean,2.200397382870117,0.0530172003429251,4.336160149018363
+held_out_point_count,hit_r90_all,difference_in_change,grid_full_prefix,grid_last_state_only,75_minus_25,-7.233593926016574,-12.518671501418266,-2.516469458630829

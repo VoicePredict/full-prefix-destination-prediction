@@ -1,0 +1,6 @@
+{
+  "status": "passed",
+  "prediction_rows": 17700,
+  "pointwise_reproduction_cases": 5900,
+  "bootstrap_rows": 18
+}

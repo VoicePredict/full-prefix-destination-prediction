@@ -1,0 +1,7 @@
+started_at=2026-07-23T14:32:07+00:00
+hostname=<reference-host>
+root=<repository-root>
+raw_root=<repository-root>/data/Geolife
+python=<repository-root>/.venv/bin/python
+Python 3.10.12
+Linux <reference-host> 5.15.0-134-generic #145-Ubuntu SMP Wed Feb 12 20:08:39 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux

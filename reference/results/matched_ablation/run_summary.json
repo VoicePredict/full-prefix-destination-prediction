@@ -1,0 +1,22 @@
+{
+  "status": "completed",
+  "users": 37,
+  "test_trajectories": 1475,
+  "ratios": [
+    0.25,
+    0.5,
+    0.66,
+    0.75
+  ],
+  "methods": [
+    "current_position_only_personal_retrieval",
+    "geometric_retrieval",
+    "grid_full_prefix",
+    "grid_last_state_only"
+  ],
+  "full_grid_predictions_reproduced": 5900,
+  "full_grid_predictions_expected": 5900,
+  "bootstrap_replicates": 10000,
+  "bootstrap_seed": 20260729,
+  "exact_resample_ids_saved": true
+}

@@ -1,0 +1,16 @@
+{
+  "status": "passed",
+  "checks": {
+    "run_completed": true,
+    "held_users_37": true,
+    "held_trajectories_1475": true,
+    "held_rows": true,
+    "expanded_users_46": true,
+    "expanded_trajectories_2888": true,
+    "expanded_rows": true,
+    "canonical_audit_exact": true,
+    "robustness_intervals_ordered": true,
+    "cross_intervals_ordered": true,
+    "deterministic_rule": true
+  }
+}

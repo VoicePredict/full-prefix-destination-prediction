@@ -1,0 +1,17 @@
+{
+  "status": "passed",
+  "matched_prediction_rows": 11800,
+  "comparison_case_rows": 23600,
+  "users": 37,
+  "trajectories": 1475,
+  "ratios": [
+    0.25,
+    0.5,
+    0.66,
+    0.75
+  ],
+  "full_grid_exact_matches": 5900,
+  "bootstrap_rows": 32,
+  "bootstrap_replicates": 10000,
+  "saved_within_user_draw_ids": 14791992
+}

@@ -1,0 +1,30 @@
+{
+  "source_experiment": "evaluation37",
+  "observation_ratios": [
+    0.25,
+    0.5,
+    0.66,
+    0.75
+  ],
+  "resample_points": 16,
+  "distance_variants": [
+    "aligned_pointwise_mean",
+    "dtw_mean_path_cost",
+    "discrete_frechet"
+  ],
+  "catalog_eps_m": 200.0,
+  "support_quantile": 0.9,
+  "bootstrap": {
+    "replicates": 10000,
+    "seed": 20260728,
+    "confidence_level": 0.95
+  },
+  "reference_method": "current_position_only_personal_retrieval",
+  "parameter_rationale": {
+    "resample_points": "The 16-position representation is the discovery-selected resolution of the original geometric method and is held identical across distances, so only the distance function changes.",
+    "dtw": "Unconstrained dynamic time warping is used on the fixed 16-by-16 representation. Accumulated cost is divided by the selected alignment-path length to avoid favouring shorter paths.",
+    "discrete_frechet": "The standard discrete Frechet recurrence is used on the same absolute-coordinate prefixes and introduces no additional parameter.",
+    "translation": "Translation is not removed, matching the original geometric retrieval protocol.",
+    "bootstrap": "The replicate count matches the primary experiment; the seed is fixed before the robustness outputs are inspected."
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "config_id": "uni_h64_e30",
+  "hidden_dim": 64,
+  "direction": "uni",
+  "epoch_budget": 30,
+  "macro_hit_r90": 0.4326442238584121,
+  "macro_within_1000m": 0.5957110153137393,
+  "macro_user_median_error_m": 12110.19528920893,
+  "selection_seed": 20260723,
+  "selection_metric": "mean user-macro Hit@R90 over all four observation ratios",
+  "outer_test_read": false
+}

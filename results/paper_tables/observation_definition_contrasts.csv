@@ -1,0 +1,10 @@
+analysis,metric,quantity,first_method,second_method,ratio_or_change,observed,ci_low,ci_high
+held_out_point_count,hit_r90_all,paired_difference,grid_full_prefix,grid_last_state_only,0.25,5.856155897692094,2.232483071654326,9.800445788765304
+held_out_point_count,hit_r90_all,paired_difference,grid_full_prefix,grid_last_state_only,0.75,-1.3774380283244791,-4.302596132646764,0.9436506104672
+held_out_point_count,hit_r90_all,difference_in_change,grid_full_prefix,grid_last_state_only,75_minus_25,-7.233593926016574,-12.518671501418266,-2.516469458630829
+held_out_elapsed_time,hit_r90_all,paired_difference,grid_full_prefix,grid_last_state_only,0.25,2.7827226308999533,-1.2008322331811612,6.947950409750118
+held_out_elapsed_time,hit_r90_all,paired_difference,grid_full_prefix,grid_last_state_only,0.75,-1.1310071436029467,-4.516976170994959,1.96158253103488
+held_out_elapsed_time,hit_r90_all,difference_in_change,grid_full_prefix,grid_last_state_only,75_minus_25,-3.9137297745029,-9.163424843533546,1.2025157753046825
+held_out_cumulative_distance,hit_r90_all,paired_difference,grid_full_prefix,grid_last_state_only,0.25,3.23529358980566,-1.2262928790727887,8.012525613071398
+held_out_cumulative_distance,hit_r90_all,paired_difference,grid_full_prefix,grid_last_state_only,0.75,0.3998820162764038,-1.9672062847151988,3.1248162267243513
+held_out_cumulative_distance,hit_r90_all,difference_in_change,grid_full_prefix,grid_last_state_only,75_minus_25,-2.835411573529256,-8.54414318560491,2.9434833467077377

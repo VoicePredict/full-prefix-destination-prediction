@@ -1,0 +1,7 @@
+{
+  "status": "passed",
+  "ambiguity_rows": 17700,
+  "held_out_users": 37,
+  "user_effect_rows": 37,
+  "bootstrap_rows": 12
+}

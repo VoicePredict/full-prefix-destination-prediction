@@ -1,0 +1,36 @@
+{
+  "held_out_source": "evaluation37",
+  "expanded_source": "expanded46",
+  "tie_source": "tie_sensitivity",
+  "bootstrap_source": "matched_ablation",
+  "observation_ratios": [0.25, 0.50, 0.66, 0.75],
+  "observation_definitions": [
+    "point_count",
+    "elapsed_time",
+    "cumulative_distance"
+  ],
+  "methods": {
+    "full": "grid_full_prefix",
+    "last": "grid_last_state_only"
+  },
+  "grid_configuration": {
+    "cell_size_m": 800.0,
+    "emission_sigma_cells": 2.5,
+    "posterior_top_k": 10,
+    "alignment_states": 32,
+    "equal_distance_rule": "lexicographic source trajectory identifier",
+    "equal_destination_mass_rule": "training catalogue order"
+  },
+  "bootstrap": {
+    "replicates": 10000,
+    "seed": 20260729,
+    "confidence_level": 0.95
+  },
+  "parameter_rationale": {
+    "observation_definitions": "Point-count, elapsed-time, and cumulative-distance cutoffs are reused unchanged from the prior observation-definition sensitivity.",
+    "quality": "The predefined recording-gap, timestamp-order, and implied-speed eligibility flag is reused without changing a threshold.",
+    "expanded_cohort": "The 46-user cohort is the previously analysed union of the 37 evaluation users and nine preliminary users; it is a sensitivity cohort, not an independent replication.",
+    "tie_rule": "Equal-distance candidates are ordered by immutable source trajectory ID; no endpoint outcome determines the order.",
+    "bootstrap": "The exact saved resample plan is reused whenever all 37-user cases are retained. Quality and 46-user analyses use the same 10000-replicate hierarchy with fixed seeds."
+  }
+}

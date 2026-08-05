@@ -1,0 +1,14 @@
+{
+  "status": "completed",
+  "users": 37,
+  "test_trajectories": 1475,
+  "prediction_rows": 17700,
+  "distance_variants": [
+    "aligned_pointwise_mean",
+    "dtw_mean_path_cost",
+    "discrete_frechet"
+  ],
+  "pointwise_analogue_matches": 5900,
+  "pointwise_cases": 5900,
+  "test_outcomes_used_for_configuration": false
+}

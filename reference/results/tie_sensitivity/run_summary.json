@@ -1,0 +1,21 @@
+{
+  "status": "completed",
+  "users": 37,
+  "test_trajectories": 1475,
+  "ratios": [
+    0.25,
+    0.5,
+    0.66,
+    0.75
+  ],
+  "variants": [
+    "legacy_top10",
+    "id_top10",
+    "inclusive_top10",
+    "id_top5",
+    "id_top20"
+  ],
+  "legacy_predictions_reproduced": 11800,
+  "legacy_predictions_expected": 11800,
+  "saved_resample_plan_reused": true
+}
