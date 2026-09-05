@@ -21,7 +21,7 @@ results:
 
 ```bash
 make environment
-python3 scripts/reproduce.py results
+make results
 ```
 
 **3. Repeat every experiment** from the original sources:
@@ -30,9 +30,30 @@ python3 scripts/reproduce.py results
 make reproduce
 ```
 
-This is the computationally intensive path. It downloads and verifies the
-external inputs, creates the pinned environment, runs the dependency graph,
-and validates every stage.
+Python 3.10 and GNU Make are required. If Python 3.10 is not exposed as
+`python3`, pass its executable explicitly, for example
+`make reproduce PYTHON=python3.10`.
+The full path also requires the Python `venv` module, outbound HTTPS access to
+Microsoft, GitHub, PyPI, and the PyTorch CPU index, and several gigabytes of
+free disk space.
+
+`requirements.txt` is the install list and pins the direct scientific
+dependencies. `constraints.txt` installs nothing by itself; it fixes the
+transitive versions selected while that list is installed. The same direct
+dependencies appear in `pyproject.toml` as package metadata.
+
+If GeoLife 1.3 is already available elsewhere, no copy is required:
+
+```bash
+make reproduce DATA_ROOT="/path/to/Geolife Trajectories 1.3"
+```
+
+This is the computationally intensive path. It first verifies the submitted
+files, creates the pinned environment, obtains and verifies the external
+inputs, runs the dependency graph, validates every stage, builds a fresh
+normalized result bundle, regenerates the paper tables and figures from that
+bundle, and fails if their published values differ from the validated files
+in `results/`.
 
 External inputs can also be prepared separately:
 
@@ -40,10 +61,11 @@ External inputs can also be prepared separately:
 python3 scripts/reproduce.py setup
 ```
 
-This downloads the official GeoLife 1.3 ZIP to a temporary cache, extracts it
-to `data/Geolife/`, downloads the pinned TSMini revision, installs it under
-`third_party/TSMini/`, and verifies the GeoLife file manifest. Repeating the
-command is safe; installed inputs are detected and reused.
+This reuses GeoLife when `--data-root PATH` is supplied, or otherwise downloads
+the official GeoLife 1.3 ZIP to a temporary cache and extracts it to
+`data/Geolife/`. It also downloads the pinned TSMini revision under
+`third_party/TSMini/` and verifies both external inputs. Repeating the command
+is safe; installed inputs are detected and reused.
 
 ## Structure
 
@@ -54,13 +76,20 @@ command is safe; installed inputs are detected and reused.
 | `scripts/` | One public runner and small reporting/verification utilities |
 | `reference/` | Three-part bundle: manifests, coordinate-free predictions, and validated results |
 | `results/` | Paper-facing tables and figures |
+| `tests/` | Scientific invariants, artifact integrity, and fresh-bundle equivalence checks |
+| `docs/` | Dataset details, reproduction protocol, and claim-to-file map |
 | `data/` | Downloaded GeoLife data; ignored by Git |
 | `third_party/` | Downloaded pinned TSMini source; ignored by Git |
 | `work/` | Generated runs, logs, and checkpoints; ignored by Git |
 
-The reviewer workflow is described in
-[`docs/REVIEWER_GUIDE.md`](docs/REVIEWER_GUIDE.md). The mapping from manuscript
-claims to files is in [`docs/CLAIM_MAP.md`](docs/CLAIM_MAP.md).
+After a complete run, the independently regenerated public bundle is written
+to `work/reproduced/` and its paper outputs to `work/reproduced-paper/`.
+
+Three detailed guides are retained under `docs/`:
+[`DATA.md`](docs/DATA.md) defines the dataset boundary and preprocessing,
+[`REPRODUCIBILITY.md`](docs/REPRODUCIBILITY.md) describes the execution graph
+and deterministic decisions, and [`CLAIM_MAP.md`](docs/CLAIM_MAP.md) maps
+manuscript claims to configuration, implementation, and results.
 
 ## Experiment organization
 
@@ -75,9 +104,20 @@ fixed for evaluation on 37 other users. The matched last-state grid ablation
 is recorded as a post-hoc diagnostic. The overlapping 46-user analysis is
 recorded as a sensitivity cohort rather than an independent replication.
 
+The catalogue audit separates DBSCAN region construction from downstream
+nearest-medoid labelling and records the 66 of 4,370 training endpoints for
+which those assignments differ. `matched_robustness` repeats the matched-grid
+calculation with original DBSCAN membership as a sensitivity analysis.
+
 Each workflow receives a `RunContext` containing its configuration, data
 root, output directory, and dependency outputs. Dependencies are addressed
 only by the stable IDs in `reference/manifests/run_registry.json`.
+
+The registered order and dependencies can be inspected without data access:
+
+```bash
+python3 scripts/reproduce.py list
+```
 
 ## Data boundary
 

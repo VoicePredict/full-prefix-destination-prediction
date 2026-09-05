@@ -13,3 +13,8 @@ legacy equal-distance result is superseded by `tie_sensitivity/id_top10` and
 Case-level outcomes live in `../predictions/`. Human-readable extracts are
 generated under `../../results/paper_tables/` by
 `../../scripts/export_paper_tables.py`.
+
+`evaluation37/final/catalogue_assignment_audit.json` records the two-stage
+training-label audit. `matched_robustness/catalogue_assignment_bootstrap.csv`
+and `catalogue_assignment_change_audit.csv` contain the corresponding
+post-hoc DBSCAN-membership sensitivity.

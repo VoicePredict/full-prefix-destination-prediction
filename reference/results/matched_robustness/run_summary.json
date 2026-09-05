@@ -7,5 +7,21 @@
   "canonical_point_count_matches": 11800,
   "canonical_point_count_expected": 11800,
   "bootstrap_replicates": 10000,
-  "deterministic_tie_rule": true
+  "deterministic_tie_rule": true,
+  "point_count_predictions_reused": true,
+  "point_count_cache_source": "tie_sensitivity/id_top10",
+  "dbscan_membership_sensitivity_users": 37,
+  "dbscan_membership_sensitivity_trajectories": 1475,
+  "dbscan_membership_sensitivity_status": "post-hoc sensitivity analysis",
+  "catalogue_assignment_case_rows": 23600,
+  "catalogue_assignment_changed_predictions": {
+    "grid_full_prefix@25": 21,
+    "grid_full_prefix@50": 40,
+    "grid_full_prefix@66": 35,
+    "grid_full_prefix@75": 33,
+    "grid_last_state_only@25": 66,
+    "grid_last_state_only@50": 27,
+    "grid_last_state_only@66": 42,
+    "grid_last_state_only@75": 25
+  }
 }

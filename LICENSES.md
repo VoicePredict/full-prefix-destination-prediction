@@ -1,4 +1,9 @@
-# External materials
+# License notices
+
+The original source code in this repository is available under the MIT
+License in `LICENSE`.
+
+## External materials
 
 GeoLife 1.3 is not redistributed. The setup command downloads it from the
 Microsoft Download Center, and use of the dataset remains subject to

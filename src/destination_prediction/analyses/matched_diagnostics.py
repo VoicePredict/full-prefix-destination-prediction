@@ -8,17 +8,17 @@ import json
 import pandas as pd
 
 from destination_prediction.analyses import diagnostic_statistics as statistics
-from destination_prediction.context import RunContext
+from destination_prediction.context import RunContext, parse_run_context
 
 
-CONTEXT = RunContext.from_environment()
-EXP_DIR = CONTEXT.run_directory
-CONFIG = CONTEXT.config
-PREDICTIONS = CONTEXT.dependency_outputs(CONFIG["prediction_source"])
-DIAGNOSTIC = CONTEXT.dependency_outputs(CONFIG["diagnostic_source"])
-OUTPUT = EXP_DIR / "outputs"
-FULL = str(CONFIG["full_method"])
-LAST = str(CONFIG["ablation_method"])
+def _configure(context: RunContext) -> None:
+    global CONFIG, PREDICTIONS, DIAGNOSTIC, OUTPUT, FULL, LAST
+    CONFIG = context.config
+    PREDICTIONS = context.dependency_outputs(CONFIG["prediction_source"])
+    DIAGNOSTIC = context.dependency_outputs(CONFIG["diagnostic_source"])
+    OUTPUT = context.run_directory / "outputs"
+    FULL = str(CONFIG["full_method"])
+    LAST = str(CONFIG["ablation_method"])
 
 def paired_cases() -> pd.DataFrame:
     cases = pd.read_csv(
@@ -38,7 +38,8 @@ def paired_cases() -> pd.DataFrame:
     return wide
 
 
-def main() -> int:
+def run(context: RunContext) -> int:
+    _configure(context)
     OUTPUT.mkdir(parents=True, exist_ok=True)
     wide = paired_cases()
     effects = statistics.user_effects(wide, FULL, LAST)
@@ -102,6 +103,10 @@ def main() -> int:
     )
     print(json.dumps(summary, indent=2))
     return 0
+
+
+def main() -> int:
+    return run(parse_run_context(description=__doc__))
 
 
 if __name__ == "__main__":

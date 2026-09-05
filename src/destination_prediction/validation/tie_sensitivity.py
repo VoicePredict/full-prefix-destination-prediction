@@ -7,19 +7,16 @@ import json
 
 import pandas as pd
 
-from destination_prediction.context import RunContext
+from destination_prediction.context import RunContext, parse_run_context
 
 
-EXP_DIR = RunContext.from_environment().run_directory
-OUTPUT = EXP_DIR / "outputs"
-
-
-def main() -> int:
-    summary = json.loads((OUTPUT / "run_summary.json").read_text(encoding="utf-8"))
-    predictions = pd.read_csv(OUTPUT / "tie_sensitivity_predictions.csv")
-    ties = pd.read_csv(OUTPUT / "top10_boundary_tie_summary.csv")
-    bootstrap = pd.read_csv(OUTPUT / "paired_tie_sensitivity_bootstrap.csv")
-    audit = pd.read_csv(OUTPUT / "legacy_reproduction_audit.csv")
+def validate(context: RunContext) -> int:
+    output = context.run_directory / "outputs"
+    summary = json.loads((output / "run_summary.json").read_text(encoding="utf-8"))
+    predictions = pd.read_csv(output / "tie_sensitivity_predictions.csv")
+    ties = pd.read_csv(output / "top10_boundary_tie_summary.csv")
+    bootstrap = pd.read_csv(output / "paired_tie_sensitivity_bootstrap.csv")
+    audit = pd.read_csv(output / "legacy_reproduction_audit.csv")
     checks = {
         "run_completed": summary["status"] == "completed",
         "users_37": int(summary["users"]) == 37,
@@ -42,12 +39,16 @@ def main() -> int:
         "legacy_exact_matches": int(audit["exact_region_match"].sum()),
         "legacy_expected": int(len(audit)),
     }
-    (OUTPUT / "validation_report.json").write_text(
+    (output / "validation_report.json").write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8"
     )
-    (OUTPUT / "COMPLETE").touch()
+    (output / "COMPLETE").touch()
     print(json.dumps(report, indent=2))
     return 0
+
+
+def main() -> int:
+    return validate(parse_run_context(description=__doc__))
 
 
 if __name__ == "__main__":

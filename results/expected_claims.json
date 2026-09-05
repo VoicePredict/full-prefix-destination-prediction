@@ -1,5 +1,5 @@
 {
-  "artifact_version": "1.0.0",
+  "artifact_version": "1.1.0",
   "manuscript_title": "When Does Full-Prefix Geometry Matter for Personal Trajectory Endpoint Prediction? A Leakage-Controlled Multi-Ratio Evaluation",
   "dataset": {
     "source_users": 182,
@@ -15,7 +15,7 @@
   "main_user_macro_hit_r90_percent": {
     "probabilistic_grid_pattern_retrieval": [42.27, 43.41, 45.55, 46.80],
     "grid_last_state_only": [36.42, 38.50, 46.14, 48.18],
-    "bigru": [38.05, 42.47, 44.57, 45.24],
+    "recurrent": [38.05, 42.47, 44.57, 45.24],
     "geometric_retrieval": [39.59, 40.46, 42.82, 45.28],
     "tsmini": [35.61, 39.53, 42.71, 43.77],
     "current_position_only_personal_retrieval": [30.99, 34.69, 42.50, 44.28],
@@ -29,6 +29,18 @@
     "0.75": [-1.38, -4.30, 0.94],
     "mean": [2.20, 0.05, 4.34],
     "75_minus_25": [-7.23, -12.52, -2.52]
+  },
+  "catalogue_assignment": {
+    "training_endpoints": 4370,
+    "reassigned_training_endpoints": 66,
+    "dbscan_membership_full_minus_last_percent_points": {
+      "0.25": [6.20, 2.39, 10.37],
+      "0.50": [4.93, 0.60, 9.29],
+      "0.66": [-0.35, -2.94, 2.15],
+      "0.75": [-1.26, -4.11, 0.95],
+      "mean": [2.38, 0.18, 4.54],
+      "75_minus_25": [-7.47, -12.85, -2.67]
+    }
   },
   "ambiguity_mean_entropy_nats": {
     "5": [0.936, 0.876, 0.765, 0.681],
@@ -51,4 +63,3 @@
     "no_close_analogue": [197, 213, 212, 216]
   }
 }
-

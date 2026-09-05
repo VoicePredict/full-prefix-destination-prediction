@@ -11,6 +11,11 @@ import math
 from collections import defaultdict
 from pathlib import Path
 
+try:  # package import in tests
+    from .update_checksums import included as release_included
+except ImportError:  # direct execution as scripts/verify_artifact.py
+    from update_checksums import included as release_included
+
 
 ROOT = Path(__file__).resolve().parents[1]
 REFERENCE = ROOT / "reference"
@@ -43,12 +48,25 @@ def verify_checksums() -> None:
     check(manifest.is_file(), "SHA256SUMS is missing")
     if not manifest.is_file():
         return
+    listed_paths: list[str] = []
     for line in manifest.read_text(encoding="utf-8").splitlines():
         expected, relative = line.split("  ", 1)
+        listed_paths.append(relative)
         path = ROOT / relative
         check(path.is_file(), f"Checksummed file is missing: {relative}")
         if path.is_file():
             check(digest(path) == expected, f"Checksum mismatch: {relative}")
+    listed = set(listed_paths)
+    expected_paths = {
+        path.relative_to(ROOT).as_posix() for path in public_release_files()
+    }
+    check(len(listed_paths) == len(listed), "SHA256SUMS contains duplicate paths")
+    check(
+        listed == expected_paths,
+        "SHA256SUMS does not exactly cover the public release: "
+        f"missing={sorted(expected_paths - listed)}, "
+        f"unexpected={sorted(listed - expected_paths)}",
+    )
 
 
 def read_csv(relative: str) -> list[dict[str, str]]:
@@ -58,30 +76,54 @@ def read_csv(relative: str) -> list[dict[str, str]]:
         return list(csv.DictReader(handle))
 
 
+def public_release_files() -> list[Path]:
+    """Return files that belong to the public release, excluding local inputs."""
+
+    return sorted(path for path in ROOT.rglob("*") if release_included(path))
+
+
 def verify_public_cases() -> None:
     expected_rows = {
-        "predictions/cross_method_cases.csv.gz": 283200,
+        "predictions/canonical_cross_method_cases.csv.gz": 7 * 4 * 1475,
         "predictions/geometric_distance_cases.csv.gz": 17700,
         "predictions/matched_grid_cases.csv.gz": 23600,
         "predictions/tie_sensitivity_cases.csv.gz": 59000,
         "predictions/tie_boundary_cases.csv.gz": 11800,
         "predictions/matched_familiarity_cases.csv.gz": 5900,
+        "predictions/catalogue_assignment_sensitivity_cases.csv.gz": 2 * 2 * 4 * 1475,
         "predictions/matched_robustness_evaluation37_cases.csv.gz": 35400,
         "predictions/matched_robustness_expanded46_cases.csv.gz": 23104,
         "predictions/ambiguity_prediction_cases.csv.gz": 106200,
         "predictions/ambiguity_binned_cases.csv.gz": 17700,
     }
     forbidden = ("_lon", "_lat", "longitude", "latitude", "trip_id", "runtime")
+    evaluation_case_sets: dict[str, set[tuple[str, str]]] = {}
     for relative, count in expected_rows.items():
         path = REFERENCE / relative
         with gzip.open(path, "rt", encoding="utf-8", newline="") as handle:
-            reader = csv.reader(handle)
-            header = next(reader)
-            rows = sum(1 for _ in reader)
+            reader = csv.DictReader(handle)
+            header = reader.fieldnames or []
+            rows = 0
+            case_set: set[tuple[str, str]] = set()
+            for row in reader:
+                rows += 1
+                if relative != "predictions/matched_robustness_expanded46_cases.csv.gz":
+                    case_set.add((row["user_id"], row["case_id"]))
         check(rows == count, f"Unexpected row count in {relative}: {rows}")
         for column in header:
             lowered = column.lower()
             check(not any(token in lowered for token in forbidden), f"Non-public column {column} in {relative}")
+        if case_set:
+            evaluation_case_sets[relative] = case_set
+
+    case_index = read_csv("results/matched_ablation/bootstrap_case_index.csv.gz")
+    expected_case_set = {(row["user_id"], row["case_id"]) for row in case_index}
+    check(len(expected_case_set) == 1475, "Bootstrap case index is not one-to-one")
+    for relative, case_set in evaluation_case_sets.items():
+        check(
+            case_set == expected_case_set,
+            f"Evaluation case-ID namespace mismatch in {relative}",
+        )
 
 
 def verify_dataset(expected: dict[str, object]) -> None:
@@ -116,10 +158,10 @@ def indexed(rows: list[dict[str, str]], keys: tuple[str, ...]) -> dict[tuple[str
 
 
 def verify_main_rates(expected: dict[str, list[float]]) -> None:
-    canonical = indexed(
-        read_csv("results/matched_robustness/canonical_cross_method_metrics.csv"),
-        ("method", "ratio"),
-    )
+    canonical = {
+        (row["method"], float(row["ratio"])): row
+        for row in read_csv("results/matched_robustness/canonical_cross_method_metrics.csv")
+    }
     matched = read_csv("results/matched_robustness/matched_robustness_bootstrap.csv")
     last = {
         str(float(row["ratio_or_change"])): row
@@ -129,13 +171,31 @@ def verify_main_rates(expected: dict[str, list[float]]) -> None:
         and row["quantity"] == "rate"
         and row["first_method"] == "grid_last_state_only"
     }
+    canonical_cases = read_csv("predictions/canonical_cross_method_cases.csv.gz")
+    case_values: dict[tuple[str, float, str], list[float]] = defaultdict(list)
+    for row in canonical_cases:
+        case_values[(row["method"], float(row["ratio"]), row["user_id"])].append(
+            float(row["hit_r90_all"])
+        )
+    case_rates: dict[tuple[str, float], list[float]] = defaultdict(list)
+    for (method, ratio, _user), values in case_values.items():
+        case_rates[(method, ratio)].append(sum(values) / len(values))
     for method, values in expected.items():
         for ratio, expected_value in zip(RATIOS, values):
             ratio_key = str(float(ratio))
             if method == "grid_last_state_only":
                 actual = float(last[ratio_key]["observed"])
             else:
-                actual = 100 * float(canonical[(method, ratio_key)]["user_macro_hit_r90"])
+                actual = 100 * float(canonical[(method, ratio)]["user_macro_hit_r90"])
+                from_cases = 100 * sum(case_rates[(method, ratio)]) / len(
+                    case_rates[(method, ratio)]
+                )
+                close(
+                    from_cases,
+                    expected_value,
+                    2,
+                    f"Case-derived Hit@R90 {method} {ratio}",
+                )
             close(actual, expected_value, 2, f"Hit@R90 {method} {ratio}")
 
 
@@ -158,14 +218,61 @@ def verify_matched(expected: dict[str, list[float]]) -> None:
             close(float(row[field]), expected_value, 2, f"Matched {key} {field}")
 
 
+def verify_catalogue_assignment(expected: dict[str, object]) -> None:
+    audit = json.loads(
+        (
+            REFERENCE
+            / "results/evaluation37/final/catalogue_assignment_audit.json"
+        ).read_text(encoding="utf-8")
+    )
+    check(
+        audit["reassigned_training_endpoints"] == expected["reassigned_training_endpoints"],
+        "Catalogue reassignment numerator mismatch",
+    )
+    check(
+        audit["training_endpoints"] == expected["training_endpoints"],
+        "Catalogue reassignment denominator mismatch",
+    )
+    check(
+        audit["audit_statement"] == "66/4,370 training endpoints were reassigned from their original DBSCAN component to the nearest frozen catalogue medoid.",
+        "Catalogue reassignment statement mismatch",
+    )
+    rows = read_csv(
+        "results/matched_robustness/catalogue_assignment_bootstrap.csv"
+    )
+    selected = {
+        row["ratio_or_change"]: row
+        for row in rows
+        if row["assignment_rule"] == "dbscan_membership"
+        and row["first_method"] == "grid_full_prefix"
+        and row["second_method"] == "grid_last_state_only"
+        and row["quantity"] in {
+            "paired_difference",
+            "mean_difference",
+            "difference_in_change",
+        }
+    }
+    for key, values in expected["dbscan_membership_full_minus_last_percent_points"].items():
+        row = selected[key]
+        for field, expected_value in zip(("observed", "ci_low", "ci_high"), values):
+            close(
+                float(row[field]),
+                expected_value,
+                2,
+                f"DBSCAN-membership sensitivity {key} {field}",
+            )
+
+
 def verify_ambiguity(expected: dict[str, list[float]]) -> None:
     rows = read_csv("predictions/ambiguity_binned_cases.csv.gz")
-    grouped: dict[tuple[str, str], list[float]] = defaultdict(list)
+    grouped: dict[tuple[str, float], list[float]] = defaultdict(list)
     for row in rows:
-        grouped[(row["requested_k"], row["ratio"])].append(float(row["entropy_nats"]))
+        grouped[(row["requested_k"], float(row["ratio"]))].append(
+            float(row["entropy_nats"])
+        )
     for k, values in expected.items():
         for ratio, expected_value in zip(RATIOS, values):
-            samples = grouped[(k, str(ratio))]
+            samples = grouped[(k, ratio)]
             actual = sum(samples) / len(samples)
             close(actual, expected_value, 3, f"Ambiguity k={k} ratio={ratio}")
 
@@ -212,7 +319,11 @@ def verify_familiarity_counts(expected: dict[str, list[int]]) -> None:
 
 
 def verify_miscellaneous() -> None:
-    large = [path for path in ROOT.rglob("*") if path.is_file() and path.stat().st_size >= 50 * 1024 * 1024]
+    large = [
+        path
+        for path in public_release_files()
+        if path.stat().st_size >= 50 * 1024 * 1024
+    ]
     check(not large, "Files at or above 50 MiB require Git LFS: " + ", ".join(map(str, large)))
     check(
         (REFERENCE / "results" / "matched_ablation" / "bootstrap_resample_ids.npz").is_file(),
@@ -234,6 +345,58 @@ def verify_miscellaneous() -> None:
             required_cohort_columns.issubset(cohort_rows[0]),
             "Normalized cohort manifest is missing required provenance columns",
         )
+        check(len(cohort_rows) == 182, "Cohort manifest must contain all 182 users")
+        check(
+            len({row["user_id"] for row in cohort_rows}) == 182,
+            "Cohort manifest user IDs must be unique",
+        )
+        expected_memberships = {
+            "eligibility": 76,
+            "discovery_membership": 30,
+            "prior_use": 41,
+            "evaluation_membership": 37,
+            "expanded_membership": 46,
+        }
+        for column, expected_count in expected_memberships.items():
+            actual_count = sum(row[column] == "true" for row in cohort_rows)
+            check(
+                actual_count == expected_count,
+                f"Unexpected {column} count: {actual_count}",
+            )
+
+    assignment_audit = json.loads(
+        (
+            REFERENCE
+            / "results/evaluation37/final/catalogue_assignment_audit.json"
+        ).read_text(encoding="utf-8")
+    )
+    expected_assignment = {
+        "training_endpoints": 4370,
+        "users": 37,
+        "catalogue_regions": 1170,
+        "reassigned_training_endpoints": 66,
+        "assignments_different_from_original_dbscan_component": 66,
+        "users_with_at_least_one_reassignment": 12,
+        "affected_catalogue_regions": 44,
+    }
+    for key, value in expected_assignment.items():
+        check(
+            assignment_audit.get(key) == value,
+            f"Catalogue-assignment audit mismatch: {key}",
+        )
+    check(
+        assignment_audit.get("candidate_and_class_assignment")
+        == "nearest catalogue medoid",
+        "Frozen candidate/class assignment rule is not explicit",
+    )
+
+    vendor_manifest = ROOT / "third_party/TSMini/VENDOR_FILES.sha256"
+    check(vendor_manifest.is_file(), "Pinned TSMini file manifest is missing")
+    if vendor_manifest.is_file():
+        check(
+            len(vendor_manifest.read_text(encoding="utf-8").splitlines()) == 16,
+            "Pinned TSMini file manifest must cover 16 upstream files",
+        )
 
     registry = json.loads(
         (REFERENCE / "manifests" / "run_registry.json").read_text(encoding="utf-8")
@@ -251,6 +414,7 @@ def verify_miscellaneous() -> None:
         "src/destination_prediction/metrics.py",
         "src/destination_prediction/bootstrap.py",
         "src/destination_prediction/methods/grid_pattern_retrieval.py",
+        "src/destination_prediction/methods/recurrent_classifier.py",
         "src/destination_prediction/evaluate.py",
         "scripts/reproduce.py",
         "scripts/verify_protocol.py",
@@ -284,8 +448,8 @@ def verify_miscellaneous() -> None:
         "100." + "82." + "212.121",
     )
     text_suffixes = {".py", ".md", ".txt", ".json", ".csv", ".toml", ".yml", ".yaml", ".sh"}
-    for path in ROOT.rglob("*"):
-        if not path.is_file() or path.name == "SHA256SUMS" or "tests" in path.parts:
+    for path in public_release_files():
+        if "tests" in path.parts:
             continue
         if path.suffix.lower() not in text_suffixes:
             continue
@@ -301,6 +465,7 @@ def main() -> int:
     verify_dataset(expected["dataset"])
     verify_main_rates(expected["main_user_macro_hit_r90_percent"])
     verify_matched(expected["matched_full_minus_last_percent_points"])
+    verify_catalogue_assignment(expected["catalogue_assignment"])
     verify_ambiguity(expected["ambiguity_mean_entropy_nats"])
     verify_ties(expected["tie_stage_contrast_percent_points"])
     verify_observation_definitions(expected["alternative_observation_stage_contrast_percent_points"])

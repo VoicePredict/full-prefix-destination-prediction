@@ -26,8 +26,9 @@ implemented once and parameterized by cohort configuration. The expanded
 cohort omits familiarity calculations because no reported claim uses them.
 
 Tie sensitivity produces the deterministic point-count full-grid and
-last-state cases in one pass. Matched robustness reuses those cases and
-computes only elapsed-time, cumulative-distance, and expanded-cohort cases.
+last-state cases in one pass. Matched robustness reproduces those cases,
+reuses their reported values, and additionally computes elapsed-time,
+cumulative-distance, expanded-cohort, and DBSCAN-membership-label cases.
 The initial matched-ablation pass is retained because it supplies the exact
 10,000-replicate bootstrap plan and the legacy-order reproduction audit.
 
@@ -37,6 +38,12 @@ The initial matched-ablation pass is retained because it supplies the exact
   in JSON.
 - Equal-distance candidates are ordered by immutable training trajectory ID.
 - Equal destination mass is resolved by training-catalogue order.
+- Original DBSCAN membership fixes medoids and support radii; the implemented
+  downstream training label is the nearest frozen medoid, with catalogue-order
+  ties.
+- The assignment sensitivity changes only candidate-region labels and reuses
+  the exact point-count distances, grid settings, scoring rule, and bootstrap
+  plan.
 - Bootstrap draws preserve complete four-ratio case vectors.
 - The last-state ablation changes only whether preceding aligned states enter
   the grid distance.
@@ -52,3 +59,10 @@ The immutable reference execution is stored under `reference/`: dataset,
 normalized cohort, run-role, and environment records in `manifests/`,
 coordinate-free cases in `predictions/`, and validated statistics in
 `results/`.
+
+After all ten runs validate, the orchestrator constructs a new public bundle
+under `work/reproduced/` using an explicit file and column whitelist. Tables
+and figures are then generated solely from that bundle under
+`work/reproduced-paper/`. The command fails if schemas, row keys, rounded
+published values, or figure bytes differ from the checked-in paper outputs.
+The immutable `reference/` directory is never overwritten by this process.

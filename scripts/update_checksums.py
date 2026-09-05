@@ -18,12 +18,17 @@ def included(path: Path) -> bool:
         return False
     if ".git" in parts or "__pycache__" in parts:
         return False
+    if any(part.endswith(".egg-info") for part in parts):
+        return False
     if parts[0] in {".venv", ".pytest_cache", ".mypy_cache", "work"}:
         return False
     if len(parts) >= 2 and parts[:2] == ("data", "Geolife"):
         return False
     if len(parts) >= 3 and parts[:2] == ("third_party", "TSMini"):
-        return relative == Path("third_party/TSMini/VENDOR_PROVENANCE.md")
+        return relative in {
+            Path("third_party/TSMini/VENDOR_PROVENANCE.md"),
+            Path("third_party/TSMini/VENDOR_FILES.sha256"),
+        }
     if relative.suffix == ".pdf" and parts[:2] == ("results", "figures"):
         return False
     return path.is_file()

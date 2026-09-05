@@ -70,6 +70,5 @@
   },
   "manual_segmentation": false,
   "row_level_mode_filtering": false,
-  "source_file_retained_as_indivisible_unit": true,
-  "trip_pickle_sha256": "b6532a6b8f00ad4c419beada457f015e4cf49eb9fe8a8d9d2f74bed7835d4056"
+  "source_file_retained_as_indivisible_unit": true
 }

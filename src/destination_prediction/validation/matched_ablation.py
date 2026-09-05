@@ -8,11 +8,7 @@ import json
 import numpy as np
 import pandas as pd
 
-from destination_prediction.context import RunContext
-
-
-EXP_DIR = RunContext.from_environment().run_directory
-OUTPUT = EXP_DIR / "outputs"
+from destination_prediction.context import RunContext, parse_run_context
 
 
 def require(condition: bool, message: str) -> None:
@@ -20,7 +16,8 @@ def require(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
-def main() -> int:
+def validate(context: RunContext) -> int:
+    output = context.run_directory / "outputs"
     required = [
         "matched_grid_predictions.csv",
         "training_destination_catalog.csv",
@@ -31,17 +28,16 @@ def main() -> int:
         "bootstrap_resample_ids.npz",
         "bootstrap_case_index.csv",
         "run_summary.json",
-        "code_and_config_checksums.sha256",
     ]
     for name in required:
-        require((OUTPUT / name).is_file(), f"Missing output: {name}")
+        require((output / name).is_file(), f"Missing output: {name}")
 
-    predictions = pd.read_csv(OUTPUT / "matched_grid_predictions.csv")
-    cases = pd.read_csv(OUTPUT / "comparison_cases.csv")
-    audit = pd.read_csv(OUTPUT / "full_grid_reproduction_audit.csv")
-    bootstrap = pd.read_csv(OUTPUT / "paired_bootstrap.csv")
-    case_index = pd.read_csv(OUTPUT / "bootstrap_case_index.csv")
-    plan = np.load(OUTPUT / "bootstrap_resample_ids.npz")
+    predictions = pd.read_csv(output / "matched_grid_predictions.csv")
+    cases = pd.read_csv(output / "comparison_cases.csv")
+    audit = pd.read_csv(output / "full_grid_reproduction_audit.csv")
+    bootstrap = pd.read_csv(output / "paired_bootstrap.csv")
+    case_index = pd.read_csv(output / "bootstrap_case_index.csv")
+    plan = np.load(output / "bootstrap_resample_ids.npz")
 
     require(len(predictions) == 11800, "Expected two methods x 5,900 cases.")
     require(predictions["user_id"].nunique() == 37, "Expected 37 users.")
@@ -124,11 +120,15 @@ def main() -> int:
         "bootstrap_replicates": int(user_draws.shape[0]),
         "saved_within_user_draw_ids": int(len(within_draws)),
     }
-    (OUTPUT / "validation_report.json").write_text(
+    (output / "validation_report.json").write_text(
         json.dumps(report, indent=2) + "\n", encoding="utf-8"
     )
     print(json.dumps(report, indent=2), flush=True)
     return 0
+
+
+def main() -> int:
+    return validate(parse_run_context(description=__doc__))
 
 
 if __name__ == "__main__":

@@ -9,15 +9,16 @@ import time
 import numpy as np
 import pandas as pd
 
-from destination_prediction.context import RunContext
+from destination_prediction.context import RunContext, parse_run_context
 from destination_prediction.protocol import EvaluationProtocol
 
 
-CONTEXT = RunContext.from_environment()
-EXP_DIR = CONTEXT.run_directory
-CONFIG = CONTEXT.config
-SOURCE = CONTEXT.dependency_directory(CONFIG["source_experiment"])
-OUTPUT = EXP_DIR / "outputs"
+def _configure(context: RunContext) -> None:
+    global CONTEXT, CONFIG, SOURCE, OUTPUT
+    CONTEXT = context
+    CONFIG = context.config
+    SOURCE = context.dependency_directory(CONFIG["source_experiment"])
+    OUTPUT = context.run_directory / "outputs"
 
 
 def source_protocol():
@@ -376,7 +377,8 @@ def runtime_summary(native: pd.DataFrame) -> pd.DataFrame:
     )
 
 
-def main() -> int:
+def run(context: RunContext) -> int:
+    _configure(context)
     OUTPUT.mkdir(parents=True, exist_ok=True)
     protocol = source_protocol()
     marked = protocol.load_marked()
@@ -468,6 +470,10 @@ def main() -> int:
     )
     print(json.dumps(summary, indent=2), flush=True)
     return 0
+
+
+def main() -> int:
+    return run(parse_run_context(description=__doc__))
 
 
 if __name__ == "__main__":

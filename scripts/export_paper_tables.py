@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import argparse
+import shutil
 from pathlib import Path
+from collections.abc import Sequence
 
 import pandas as pd
 
@@ -19,7 +22,7 @@ RATIOS = [0.25, 0.50, 0.66, 0.75]
 METHOD_NAMES = {
     "probabilistic_grid_pattern_retrieval": "Probabilistic grid-pattern retrieval",
     "grid_last_state_only": "Last-state grid ablation",
-    "bigru": "Recurrent destination classifier",
+    "recurrent": "Recurrent destination classifier",
     "geometric_retrieval": "Geometric prefix retrieval",
     "tsmini": "TSMini embedding retrieval",
     "current_position_only_personal_retrieval": "Current-position-only retrieval",
@@ -162,6 +165,7 @@ def point_error_table() -> None:
 
 def copy_reporting_tables() -> None:
     copies = {
+        "cohort_characteristics.csv": FROZEN / "cohort_characteristics.csv",
         "tie_stage_sensitivity.csv": FROZEN / "tie_sensitivity/paired_tie_sensitivity_bootstrap.csv",
         "matched_prefix_familiarity.csv": FROZEN / "matched_familiarity/matched_familiarity_bootstrap.csv",
         "matched_user_effects.csv": FROZEN / "matched_diagnostics/matched_user_effects.csv",
@@ -172,16 +176,49 @@ def copy_reporting_tables() -> None:
         "prefix_analogue_metrics.csv": FROZEN / "evaluation37/analysis/prefix_analogue_metrics.csv",
     }
     for name, source in copies.items():
-        write(pd.read_csv(source), name)
+        if name == "cohort_characteristics.csv":
+            OUT.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(source, OUT / name)
+        else:
+            write(pd.read_csv(source), name)
 
 
-def main() -> int:
+def parser() -> argparse.ArgumentParser:
+    result = argparse.ArgumentParser(
+        description="Generate the manuscript tables from a normalized result bundle."
+    )
+    result.add_argument(
+        "--bundle-root",
+        type=Path,
+        default=REFERENCE,
+        help="Bundle containing manifests/, predictions/, and results/.",
+    )
+    result.add_argument(
+        "--output-root",
+        type=Path,
+        default=OUT,
+        help="Directory receiving the paper-facing CSV tables.",
+    )
+    return result
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    global FROZEN, PREDICTIONS, OUT
+    arguments = parser().parse_args(argv)
+    bundle_root = arguments.bundle_root.expanduser().resolve()
+    FROZEN = bundle_root / "results"
+    PREDICTIONS = bundle_root / "predictions"
+    OUT = arguments.output_root.expanduser().resolve()
     main_method_table()
     matched_tables()
     ambiguity_table()
     point_error_table()
     copy_reporting_tables()
-    print(f"Wrote paper-facing tables to {OUT.relative_to(ROOT)}")
+    try:
+        display = OUT.relative_to(ROOT)
+    except ValueError:
+        display = OUT
+    print(f"Wrote paper-facing tables to {display}")
     return 0
 
 

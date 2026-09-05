@@ -3,6 +3,8 @@
   "cell_size_m": 800.0,
   "emission_sigma_cells": 2.5,
   "posterior_top_k": 10.0,
+  "alignment_states": 32,
+  "candidate_tie_rule": "legacy",
   "macro_hit_r90": 0.44432424885453214,
   "macro_within_1000m": 0.6173467292216561,
   "macro_user_median_error_m": 12019.062231309608,

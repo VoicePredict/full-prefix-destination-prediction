@@ -9,21 +9,26 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from destination_prediction.context import RunContext
+from destination_prediction.context import RunContext, parse_run_context
+from destination_prediction.methods.grid_pattern_retrieval import (
+    emit_destination_region,
+)
 from destination_prediction.protocol import EvaluationProtocol
 
 
-CONTEXT = RunContext.from_environment()
-EXP_DIR = CONTEXT.run_directory
-CONFIG = CONTEXT.config
-HELD = CONTEXT.dependency_directory(CONFIG["held_out_source"])
-EXPANDED = CONTEXT.dependency_directory(CONFIG["expanded_source"])
-TIE = CONTEXT.dependency_directory(CONFIG["tie_source"])
-BOOTSTRAP = CONTEXT.dependency_directory(CONFIG["bootstrap_source"])
-OUTPUT = EXP_DIR / "outputs"
-FULL = str(CONFIG["methods"]["full"])
-LAST = str(CONFIG["methods"]["last"])
-RATIOS = list(map(float, CONFIG["observation_ratios"]))
+def _configure(context: RunContext) -> None:
+    global CONTEXT, CONFIG, HELD, EXPANDED, TIE, BOOTSTRAP, OUTPUT
+    global FULL, LAST, RATIOS
+    CONTEXT = context
+    CONFIG = context.config
+    HELD = context.dependency_directory(CONFIG["held_out_source"])
+    EXPANDED = context.dependency_directory(CONFIG["expanded_source"])
+    TIE = context.dependency_directory(CONFIG["tie_source"])
+    BOOTSTRAP = context.dependency_directory(CONFIG["bootstrap_source"])
+    OUTPUT = context.run_directory / "outputs"
+    FULL = str(CONFIG["methods"]["full"])
+    LAST = str(CONFIG["methods"]["last"])
+    RATIOS = list(map(float, CONFIG["observation_ratios"]))
 
 
 def load_protocol(source: str, name: str):
@@ -82,31 +87,12 @@ def resampled_cells(
     return protocol.resample_path(cells[keep], states)
 
 
-def emit_region(
-    squared: np.ndarray,
-    trip_ids: np.ndarray,
-    regions: np.ndarray,
-    sigma: float,
-    top_k: int,
-) -> int:
-    scores = -0.5 * squared / max(sigma**2, 1e-12)
-    scores -= float(np.max(scores))
-    weights = np.exp(scores)
-    weights /= float(weights.sum())
-    order = np.lexsort((trip_ids.astype(str), squared))
-    selected = order[: min(top_k, len(order))]
-    mass: dict[int, float] = {}
-    for position in selected:
-        region = int(regions[position])
-        mass[region] = mass.get(region, 0.0) + float(weights[position])
-    return int(sorted(mass, key=lambda region: (-mass[region], region))[0])
-
-
 def predict(
     source: Path,
     protocol,
     cohort: str,
     definitions: list[str],
+    assignment_rule: str = "nearest_medoid",
 ) -> pd.DataFrame:
     marked = protocol.load_marked()
     train, test = protocol.partitions(marked, "outer")
@@ -116,7 +102,14 @@ def predict(
     catalog = protocol.build_catalog(
         train, float(protocol.CONFIG["task"]["primary_dbscan_eps_m"])
     )
-    cluster_map = protocol.endpoint_cluster_map(train, catalog)
+    if assignment_rule == "nearest_medoid":
+        cluster_map = protocol.endpoint_catalogue_assignment(train, catalog)
+    elif assignment_rule == "dbscan_membership":
+        cluster_map = protocol.dbscan_component_assignment(
+            train, float(protocol.CONFIG["task"]["primary_dbscan_eps_m"])
+        )
+    else:
+        raise ValueError(f"Unknown destination assignment rule: {assignment_rule}")
     train_by_user = {
         int(user): frame.reset_index(drop=True)
         for user, frame in train.groupby("user_id", sort=True)
@@ -180,12 +173,13 @@ def predict(
                     LAST: np.square(difference[:, -1, :]).sum(axis=1),
                 }
                 for method, squared in distances.items():
-                    region = emit_region(
+                    region, _mass, _pool_size, _mass_tie = emit_destination_region(
                         squared,
                         identifiers[user],
                         regions[user],
                         sigma,
                         top_k,
+                        "trajectory_id",
                     )
                     center = centers_by_user[user].loc[region]
                     rows.append(
@@ -442,7 +436,9 @@ def summarize_bootstrap(
 
 
 def matched_analysis(
-    held: pd.DataFrame, expanded: pd.DataFrame
+    held: pd.DataFrame,
+    expanded: pd.DataFrame,
+    dbscan_membership: pd.DataFrame,
 ) -> pd.DataFrame:
     case_index = pd.read_csv(BOOTSTRAP / "outputs/bootstrap_case_index.csv")
     rows = []
@@ -471,6 +467,21 @@ def matched_analysis(
         summarize_bootstrap(
             "held_out_point_count",
             "within_200m",
+            arrays,
+            columns,
+            saved_estimates(arrays),
+            [FULL, LAST],
+            [(FULL, LAST)],
+        )
+    )
+
+    arrays, columns, _ = arrays_from_cases(
+        dbscan_membership, "hit_r90_all", [FULL, LAST], case_index
+    )
+    rows.append(
+        summarize_bootstrap(
+            "held_out_point_count_dbscan_membership",
+            "hit_r90_all",
             arrays,
             columns,
             saved_estimates(arrays),
@@ -529,14 +540,14 @@ def matched_analysis(
 
 def canonical_cross_method(
     held_point: pd.DataFrame,
-) -> tuple[pd.DataFrame, pd.DataFrame]:
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     source = pd.read_csv(
         HELD / "outputs/final/common_predictions_all_sensitivities.csv",
         dtype={"trip_id": str},
     )
     methods = [
         "probabilistic_grid_pattern_retrieval",
-        "bigru",
+        "recurrent",
         "geometric_retrieval",
         "tsmini",
         "current_position_only_personal_retrieval",
@@ -593,7 +604,10 @@ def canonical_cross_method(
             cases=("cases", "sum"),
         )
     )
-    return summary, metrics
+    cases = cases.sort_values(
+        ["method", "ratio", "user_id", "trip_id"], kind="mergesort"
+    ).reset_index(drop=True)
+    return cases, summary, metrics
 
 
 def point_count_audit(held: pd.DataFrame) -> pd.DataFrame:
@@ -620,7 +634,47 @@ def point_count_audit(held: pd.DataFrame) -> pd.DataFrame:
     return audit
 
 
-def main() -> int:
+def catalogue_assignment_change_audit(
+    nearest_medoid: pd.DataFrame,
+    dbscan_membership: pd.DataFrame,
+) -> pd.DataFrame:
+    """Count emitted-region changes after replacing only candidate labels."""
+    keys = ["method", "ratio", "user_id", "trip_id"]
+    first = nearest_medoid[keys + ["pred_center_id"]].copy()
+    second = dbscan_membership[keys + ["pred_center_id"]].copy()
+    first["trip_id"] = first["trip_id"].astype(str)
+    second["trip_id"] = second["trip_id"].astype(str)
+    paired = first.merge(
+        second,
+        on=keys,
+        suffixes=("_nearest_medoid", "_dbscan_membership"),
+        validate="one_to_one",
+    )
+    paired["prediction_region_changed"] = (
+        paired["pred_center_id_nearest_medoid"]
+        != paired["pred_center_id_dbscan_membership"]
+    )
+    return (
+        paired.groupby(["method", "ratio"], as_index=False)
+        .agg(
+            trajectories=("trip_id", "size"),
+            changed_predictions=("prediction_region_changed", "sum"),
+            users_with_changed_prediction=(
+                "user_id",
+                lambda users: int(
+                    paired.loc[
+                        users.index, "prediction_region_changed"
+                    ].groupby(users).any().sum()
+                ),
+            ),
+        )
+        .sort_values(["method", "ratio"], kind="mergesort")
+        .reset_index(drop=True)
+    )
+
+
+def run(context: RunContext) -> int:
+    _configure(context)
     OUTPUT.mkdir(parents=True, exist_ok=True)
     held_protocol = load_protocol(CONFIG["held_out_source"], "matched_robustness_held_protocol")
     expanded_protocol = load_protocol(
@@ -647,15 +701,67 @@ def main() -> int:
         "expanded_46",
         ["point_count"],
     )
+    nearest_medoid = predict(
+        HELD,
+        held_protocol,
+        "held_out_37",
+        ["point_count"],
+        assignment_rule="nearest_medoid",
+    )
+    dbscan_membership = predict(
+        HELD,
+        held_protocol,
+        "held_out_37",
+        ["point_count"],
+        assignment_rule="dbscan_membership",
+    )
     held.to_csv(OUTPUT / "held_out_predictions.csv", index=False)
     expanded.to_csv(OUTPUT / "expanded46_predictions.csv", index=False)
-    audit = point_count_audit(held)
+    dbscan_membership.to_csv(
+        OUTPUT / "dbscan_membership_predictions.csv", index=False
+    )
+    catalogue_assignment_cases = pd.concat(
+        [
+            nearest_medoid.assign(assignment_rule="nearest_medoid"),
+            dbscan_membership.assign(assignment_rule="dbscan_membership"),
+        ],
+        ignore_index=True,
+    )
+    catalogue_assignment_cases.to_csv(
+        OUTPUT / "catalogue_assignment_cases.csv", index=False
+    )
+    assignment_changes = catalogue_assignment_change_audit(
+        nearest_medoid, dbscan_membership
+    )
+    assignment_changes.to_csv(
+        OUTPUT / "catalogue_assignment_change_audit.csv", index=False
+    )
+    audit = point_count_audit(nearest_medoid)
     audit.to_csv(OUTPUT / "canonical_point_count_audit.csv", index=False)
-    matched = matched_analysis(held, expanded)
+    matched = matched_analysis(held, expanded, dbscan_membership)
     matched.to_csv(OUTPUT / "matched_robustness_bootstrap.csv", index=False)
-    cross, metrics = canonical_cross_method(
+    catalogue_assignment_bootstrap = matched[
+        matched["analysis"].isin(
+            [
+                "held_out_point_count",
+                "held_out_point_count_dbscan_membership",
+            ]
+        )
+        & (matched["metric"] == "hit_r90_all")
+    ].copy()
+    catalogue_assignment_bootstrap["assignment_rule"] = np.where(
+        catalogue_assignment_bootstrap["analysis"]
+        == "held_out_point_count_dbscan_membership",
+        "dbscan_membership",
+        "nearest_medoid",
+    )
+    catalogue_assignment_bootstrap.to_csv(
+        OUTPUT / "catalogue_assignment_bootstrap.csv", index=False
+    )
+    cross_cases, cross, metrics = canonical_cross_method(
         held[held["observation_definition"] == "point_count"]
     )
+    cross_cases.to_csv(OUTPUT / "canonical_cross_method_cases.csv", index=False)
     cross.to_csv(OUTPUT / "canonical_cross_method_bootstrap.csv", index=False)
     metrics.to_csv(OUTPUT / "canonical_cross_method_metrics.csv", index=False)
     summary = {
@@ -676,12 +782,30 @@ def main() -> int:
         "deterministic_tie_rule": True,
         "point_count_predictions_reused": True,
         "point_count_cache_source": "tie_sensitivity/id_top10",
+        "dbscan_membership_sensitivity_users": int(
+            dbscan_membership["user_id"].nunique()
+        ),
+        "dbscan_membership_sensitivity_trajectories": int(
+            dbscan_membership[["user_id", "trip_id"]].drop_duplicates().shape[0]
+        ),
+        "dbscan_membership_sensitivity_status": "post-hoc sensitivity analysis",
+        "catalogue_assignment_case_rows": int(len(catalogue_assignment_cases)),
+        "catalogue_assignment_changed_predictions": {
+            f"{row.method}@{int(round(100 * float(row.ratio)))}": int(
+                row.changed_predictions
+            )
+            for row in assignment_changes.itertuples(index=False)
+        },
     }
     (OUTPUT / "run_summary.json").write_text(
         json.dumps(summary, indent=2) + "\n", encoding="utf-8"
     )
     print(json.dumps(summary, indent=2))
     return 0
+
+
+def main() -> int:
+    return run(parse_run_context(description=__doc__))
 
 
 if __name__ == "__main__":

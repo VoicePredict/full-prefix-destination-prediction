@@ -11,7 +11,7 @@
     {
       "id": "evaluation37",
       "config": "configs/evaluation37.json",
-      "status": "frozen leakage-controlled evaluation",
+      "status": "frozen evaluation",
       "cohort": "37 previously unanalysed eligible users",
       "reported_role": "main cross-method evaluation"
     },
@@ -62,7 +62,7 @@
       "id": "matched_robustness",
       "config": "configs/matched_robustness.json",
       "status": "post-hoc sensitivity analysis",
-      "reported_role": "alternative observation definitions, quality, D200, and expanded cohort"
+      "reported_role": "alternative observation definitions, quality, D200, catalogue assignment, and expanded cohort"
     }
   ],
   "implementation_note": "Run identity is represented by an immutable configuration and manifest. Shared implementations reside under src/destination_prediction; historical copies are not duplicated."

@@ -7,46 +7,27 @@ import json
 import numpy as np
 import pandas as pd
 
-from destination_prediction.context import RunContext
-from destination_prediction.methods.grid_pattern_retrieval import resampled_cells
+from destination_prediction.context import RunContext, parse_run_context
+from destination_prediction.methods.grid_pattern_retrieval import (
+    emit_destination_region,
+    resampled_cells,
+)
 from destination_prediction.protocol import EvaluationProtocol
 
 
-CONTEXT = RunContext.from_environment()
-EXP_DIR = CONTEXT.run_directory
-CONFIG = CONTEXT.config
-SOURCE = CONTEXT.dependency_directory(CONFIG["source_experiment"])
-OUTPUT = EXP_DIR / "outputs"
+def _configure(context: RunContext) -> None:
+    global CONTEXT, CONFIG, SOURCE, OUTPUT, PROTOCOL
+    CONTEXT = context
+    CONFIG = context.config
+    SOURCE = context.dependency_directory(CONFIG["source_experiment"])
+    OUTPUT = context.run_directory / "outputs"
+    PROTOCOL = load_source_protocol()
 
 
 def load_source_protocol():
     return EvaluationProtocol(
         CONTEXT.dependency_context(CONFIG["source_experiment"])
     )
-
-
-PROTOCOL = load_source_protocol()
-
-
-def emit_region(
-    squared_distance: np.ndarray,
-    candidate_regions: np.ndarray,
-    sigma: float,
-    top_k: int,
-) -> tuple[int, float]:
-    """Apply the frozen Gaussian, top-k, aggregation, and tie rules."""
-    scores = -0.5 * squared_distance / max(float(sigma) ** 2, 1e-12)
-    scores -= float(np.max(scores))
-    posterior = np.exp(scores)
-    posterior /= float(posterior.sum())
-    order = np.argsort(-posterior)
-    selected = order[: min(int(top_k), len(order))]
-    mass: dict[int, float] = {}
-    for position in selected:
-        region = int(candidate_regions[position])
-        mass[region] = mass.get(region, 0.0) + float(posterior[position])
-    emitted = sorted(mass, key=lambda region: (-mass[region], region))[0]
-    return emitted, float(mass[emitted])
 
 
 def matched_predictions() -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -58,7 +39,7 @@ def matched_predictions() -> tuple[pd.DataFrame, pd.DataFrame]:
     catalog = PROTOCOL.build_catalog(
         train, float(PROTOCOL.CONFIG["task"]["primary_dbscan_eps_m"])
     )
-    cluster_map = PROTOCOL.endpoint_cluster_map(train, catalog)
+    cluster_map = PROTOCOL.endpoint_catalogue_assignment(train, catalog)
     train_by_user = {
         int(user): frame.reset_index(drop=True)
         for user, frame in train.groupby("user_id", sort=True)
@@ -94,6 +75,10 @@ def matched_predictions() -> tuple[pd.DataFrame, pd.DataFrame]:
             )
             for user, frame in train_by_user.items()
         }
+        candidate_ids = {
+            user: frame["trip_id"].astype(str).to_numpy()
+            for user, frame in train_by_user.items()
+        }
         for test_row in test.itertuples(index=False):
             user = int(test_row.user_id)
             query = resampled_cells(
@@ -106,8 +91,13 @@ def matched_predictions() -> tuple[pd.DataFrame, pd.DataFrame]:
                 (str(CONFIG["methods"]["full"]), squared_full),
                 (str(CONFIG["methods"]["ablation"]), squared_last),
             ]:
-                region, mass = emit_region(
-                    squared, candidate_regions[user], sigma, top_k
+                region, mass, _pool_size, _mass_tie = emit_destination_region(
+                    squared,
+                    candidate_ids[user],
+                    candidate_regions[user],
+                    sigma,
+                    top_k,
+                    "legacy",
                 )
                 center = centers_by_user[user].loc[region]
                 rows.append(
@@ -396,7 +386,8 @@ def hierarchical_bootstrap(cases: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def main() -> int:
+def run(context: RunContext) -> int:
+    _configure(context)
     OUTPUT.mkdir(parents=True, exist_ok=True)
     evaluated, catalog = matched_predictions()
     evaluated.to_csv(OUTPUT / "matched_grid_predictions.csv", index=False)
@@ -430,6 +421,10 @@ def main() -> int:
     )
     print(json.dumps(summary, indent=2), flush=True)
     return 0
+
+
+def main() -> int:
+    return run(parse_run_context(description=__doc__))
 
 
 if __name__ == "__main__":

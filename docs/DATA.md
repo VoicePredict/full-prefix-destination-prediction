@@ -71,8 +71,18 @@ training endpoint. R80, R90, and R95 are training-only within-region distance
 quantiles; singleton supports consequently have radius zero. D200 is retained
 as a common nonzero sensitivity metric.
 
+The implementation uses the original DBSCAN components to construct region
+medoids, support counts, and empirical radii. After those quantities are
+frozen, each training candidate and classifier target receives the label of
+its nearest personal medoid. The two partitions differ for 66 of 4,370
+evaluation-history endpoints (1.51%), across 12 users and 44 catalogue
+regions. The exact audit is retained in
+`reference/results/evaluation37/final/catalogue_assignment_audit.json`. A
+post-hoc matched-grid sensitivity replaces the downstream labels by original
+DBSCAN membership while retaining the catalogue, scoring rule, candidates,
+and saved bootstrap plan.
+
 An evaluation endpoint outside every training R90 support remains in the
 denominator and is counted as an error. The public case files preserve
 coverage and all-case hit indicators while omitting the underlying endpoint
 coordinates.
-

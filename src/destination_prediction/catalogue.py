@@ -73,9 +73,16 @@ def nearest_catalogue_center(
     return centers.iloc[position], float(distances[position])
 
 
-def endpoint_cluster_map(
+def endpoint_catalogue_assignment(
     train: pd.DataFrame, catalogue: pd.DataFrame
 ) -> dict[tuple[int, str], int]:
+    """Assign training endpoints to their nearest frozen catalogue medoid.
+
+    DBSCAN components define the catalogue medoids and empirical support
+    radii.  The validated downstream candidate/class rule is a second,
+    nearest-medoid assignment; it is not the original DBSCAN component label.
+    Exact distance ties follow catalogue row order through ``argmin``.
+    """
     mapping: dict[tuple[int, str], int] = {}
     for row in train.itertuples(index=False):
         lon, lat = row.wgs_seq[-1]
@@ -84,3 +91,60 @@ def endpoint_cluster_map(
         )
         mapping[(int(row.user_id), str(row.trip_id))] = int(center.center_id)
     return mapping
+
+
+def dbscan_component_assignment(
+    train: pd.DataFrame, eps_m: float, min_samples: int
+) -> dict[tuple[int, str], int]:
+    """Return the ordered DBSCAN component used to construct each medoid."""
+    mapping: dict[tuple[int, str], int] = {}
+    for user_id, group in train.groupby("user_id", sort=True):
+        endpoints = np.asarray([seq[-1] for seq in group["wgs_seq"]], dtype=float)
+        trip_ids = group["trip_id"].astype(str).to_numpy()
+        lon0 = float(np.median(endpoints[:, 0]))
+        lat0 = float(np.median(endpoints[:, 1]))
+        xy = local_xy(endpoints[:, 0], endpoints[:, 1], lon0, lat0)
+        labels = DBSCAN(eps=float(eps_m), min_samples=int(min_samples)).fit_predict(xy)
+        ordered_labels = sorted(
+            np.unique(labels), key=lambda label: str(min(trip_ids[labels == label]))
+        )
+        label_to_center = {int(label): index for index, label in enumerate(ordered_labels)}
+        for trip_id, label in zip(trip_ids, labels):
+            mapping[(int(user_id), str(trip_id))] = label_to_center[int(label)]
+    return mapping
+
+
+def catalogue_assignment_audit(
+    train: pd.DataFrame,
+    catalogue: pd.DataFrame,
+    eps_m: float,
+    min_samples: int,
+) -> dict[str, object]:
+    """Describe the frozen post-clustering nearest-medoid assignment step."""
+    component = dbscan_component_assignment(train, eps_m, min_samples)
+    assigned = endpoint_catalogue_assignment(train, catalogue)
+    changed = [key for key in component if component[key] != assigned[key]]
+    affected_regions = {
+        (key[0], component[key]) for key in changed
+    } | {
+        (key[0], assigned[key]) for key in changed
+    }
+    return {
+        "catalogue_construction": "personal training-endpoint DBSCAN",
+        "candidate_and_class_assignment": "nearest catalogue medoid",
+        "catalog_eps_m": float(eps_m),
+        "training_endpoints": int(len(train)),
+        "users": int(train["user_id"].nunique()),
+        "catalogue_regions": int(len(catalogue)),
+        "reassigned_training_endpoints": int(len(changed)),
+        "reassigned_training_endpoint_fraction": float(len(changed) / len(train)),
+        "assignments_different_from_original_dbscan_component": int(len(changed)),
+        "users_with_at_least_one_reassignment": int(len({key[0] for key in changed})),
+        "affected_catalogue_regions": int(len(affected_regions)),
+        "audit_statement": (
+            f"{len(changed):,}/{len(train):,} training endpoints were reassigned "
+            "from their original DBSCAN component to the nearest frozen catalogue medoid."
+        ),
+        "reported_results_assignment": "nearest frozen catalogue medoid",
+        "sensitivity_assignment": "original ordered DBSCAN component",
+    }

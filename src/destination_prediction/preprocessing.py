@@ -4,7 +4,6 @@
 from __future__ import annotations
 
 import csv
-import hashlib
 import json
 import math
 from collections import Counter
@@ -14,19 +13,10 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from destination_prediction.context import RunContext
+from destination_prediction.context import RunContext, parse_run_context
 
 
 EARTH_RADIUS_M = 6_371_008.8
-
-
-def sha256(path: Path) -> str:
-    digest = hashlib.sha256()
-    with path.open("rb") as handle:
-        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-            digest.update(chunk)
-    return digest.hexdigest()
-
 
 def haversine_segments_m(lon: np.ndarray, lat: np.ndarray) -> np.ndarray:
     if len(lon) < 2:
@@ -106,6 +96,25 @@ def labelled_modes(times: pd.Series, labels: pd.DataFrame) -> tuple[list[str], f
     return assigned.tolist(), known_share
 
 
+def overlapping_label_modes(
+    start: datetime | pd.Timestamp,
+    end: datetime | pd.Timestamp,
+    labels: pd.DataFrame,
+) -> list[str]:
+    """Return modes whose inclusive label intervals overlap a file interval.
+
+    This file-level operation is deliberately independent of GPS sampling.  A
+    label can overlap the interval between two recorded points even when no
+    point timestamp falls inside the label interval.
+    """
+    if labels.empty:
+        return []
+    start_time = pd.Timestamp(start)
+    end_time = pd.Timestamp(end)
+    overlaps = (labels["start"] <= end_time) & (labels["end"] >= start_time)
+    return sorted(set(labels.loc[overlaps, "mode"].astype(str)))
+
+
 def even_indices(length: int, maximum: int) -> np.ndarray:
     if length <= maximum:
         return np.arange(length, dtype=int)
@@ -155,13 +164,16 @@ def inspect_trip(
     positive = delta_s > 0
     speed_mps = np.full(len(delta_s), np.nan, dtype=float)
     speed_mps[positive] = segment_m[positive] / delta_s[positive]
+    start_time = frame["datetime"].iloc[0]
+    end_time = frame["datetime"].iloc[-1]
     modes, labelled_share = labelled_modes(frame["datetime"], labels)
     known_modes = sorted(set(mode for mode in modes if mode != "unknown"))
-    non_ground = sorted(set(known_modes).intersection(set(cfg["non_ground_modes"])))
+    interval_modes = overlapping_label_modes(start_time, end_time, labels)
+    non_ground = sorted(set(interval_modes).intersection(set(cfg["non_ground_modes"])))
 
     audit.update(
-        start_datetime=frame["datetime"].iloc[0].isoformat(),
-        end_datetime=frame["datetime"].iloc[-1].isoformat(),
+        start_datetime=start_time.isoformat(),
+        end_datetime=end_time.isoformat(),
         duration_s=duration_s,
         labelled_point_share=labelled_share,
         known_modes="|".join(known_modes),
@@ -350,6 +362,18 @@ def run(context: RunContext) -> dict[str, object]:
     per_user["total"] = per_user[["fit", "validation", "test"]].sum(axis=1)
     per_user.to_csv(output / "partition_counts_by_user.csv", index=False)
     audit_frame = pd.DataFrame(audits)
+    cohort_provenance: dict[str, list[int]] = {}
+    excluded_users = sorted(map(int, cfg.get("exclude_user_ids", [])))
+    included_users = sorted(map(int, cfg.get("include_user_ids", [])))
+    if included_users:
+        cohort_provenance = {
+            "excluded_prior_users": excluded_users,
+            "prespecified_evaluation_users": included_users,
+        }
+    elif cfg["cohort_sampling"] == (
+        "all eligible users not included in the frozen 30-user discovery cohort"
+    ):
+        cohort_provenance = {"excluded_discovery_users": excluded_users}
     summary = {
         "raw_root": context.repository_relative(raw_root),
         "source_users": int(len(user_dirs)),
@@ -357,12 +381,7 @@ def run(context: RunContext) -> dict[str, object]:
         "eligible_whole_trajectories_before_user_selection": int(len(all_trips)),
         "users_meeting_minimum_history": int(cohort_frame.shape[0]),
         "selected_users": chosen,
-        "excluded_prior_users": sorted(
-            map(int, cfg.get("exclude_user_ids", []))
-        ),
-        "prespecified_evaluation_users": sorted(
-            map(int, cfg.get("include_user_ids", []))
-        ),
+        **cohort_provenance,
         "selected_user_count": len(chosen),
         "selected_trajectories": int(len(trips)),
         "partition_counts": {str(k): int(v) for k, v in manifest["partition"].value_counts().items()},
@@ -388,7 +407,6 @@ def run(context: RunContext) -> dict[str, object]:
         "manual_segmentation": False,
         "row_level_mode_filtering": False,
         "source_file_retained_as_indivisible_unit": True,
-        "trip_pickle_sha256": sha256(trip_file),
     }
     (output / "preparation_summary.json").write_text(
         json.dumps(summary, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
@@ -397,7 +415,7 @@ def run(context: RunContext) -> dict[str, object]:
 
 
 def main() -> int:
-    summary = run(RunContext.from_environment())
+    summary = run(parse_run_context(description=__doc__))
     print(json.dumps(summary, indent=2, ensure_ascii=False), flush=True)
     return 0
 

@@ -118,6 +118,5 @@
   },
   "manual_segmentation": false,
   "row_level_mode_filtering": false,
-  "source_file_retained_as_indivisible_unit": true,
-  "trip_pickle_sha256": "ae7a407120264e1416d35307a4486367471f75dceb2a32f13a034c0d4674c42b"
+  "source_file_retained_as_indivisible_unit": true
 }

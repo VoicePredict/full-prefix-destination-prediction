@@ -121,7 +121,8 @@
         "cell_size_m": 800.0,
         "emission_sigma_cells": 2.5,
         "posterior_top_k": 10,
-        "alignment_states": 32
+        "alignment_states": 32,
+        "candidate_tie_rule": "legacy"
       },
       "tsmini": {
         "config_id": "e64_d5000_epochs15",
@@ -129,7 +130,7 @@
         "normalizer_m": 5000.0,
         "epoch_budget": 15
       },
-      "bigru": {
+      "recurrent": {
         "config_id": "uni_h64_e30",
         "hidden_dim": 64,
         "direction": "uni",
@@ -159,7 +160,7 @@
         "attention_dropout": 0.1
       }
     },
-    "bigru_destination_classifier": {
+    "recurrent_destination_classifier": {
       "user_embedding_dim": 8,
       "layers": 1,
       "dropout": 0.15,
@@ -210,9 +211,10 @@
     "fixed_geometric_configuration": "Sixteen arc-length positions are copied from the discovery-validation winner; 32 and 64 were evaluated only in discovery and are not reconsidered in evaluation.",
     "fixed_grid_pattern_configuration": "The 800 m grid is an internal pattern-discretization scale rather than a destination-region radius. Together with the 2.5-cell emission width and posterior pool of 10, it is copied from the discovery-validation winner and is not retuned.",
     "fixed_tsmini_configuration": "The 64-dimensional embedding, 5 km trajectory-distance normalizer, and 15-epoch budget are copied from the discovery-validation winner. These values remain fixed during evaluation.",
-    "fixed_bigru_configuration": "The unidirectional 64-unit model and 30-epoch budget are copied from the discovery-validation winner. The BiGRU family label is retained for consistency with the compared recurrent family even though the selected direction is unidirectional.",
+    "fixed_recurrent_configuration": "The unidirectional 64-unit GRU and 30-epoch budget are copied from the discovery-validation winner. The public method identifier reflects the selected recurrent classifier rather than the broader bidirectional candidate family considered during discovery.",
     "neural_seeds": "Five consecutive prespecified seeds expose stochastic training variability separately from case-sampling uncertainty.",
     "grid_pattern_alignment_states": "Probabilistic grid-pattern prefixes are represented by 32 equally spaced alignment states, the midpoint of the discovery experiment's prespecified 16/32/64 geometric resolution grid. The 800 m cell scale, 2.5-cell emission width, and posterior pool of 10 are copied unchanged from discovery validation.",
+    "grid_candidate_ties": "The frozen cross-method execution first reproduces the historical NumPy ordering inherited from discovery. Publication-facing grid estimates are then recomputed with lexicographic source-trajectory identifiers by the registered post-hoc tie_sensitivity run; no model parameter is selected or changed.",
     "tsmini_fixed_architecture": "Convolutional and transformer constants are copied from the public TSMini reference configuration. The 64-dimensional embedding, 5 km distance normalization, and 15-epoch budget are copied unchanged from discovery validation; the official weighted-MSE plus kNN-guided LambdaLoss objective is retained.",
     "tsmini_target_resampling": "Thirty-two arc-length positions are used to form the conventional prefix-distance supervision because this is the central member of the prespecified 16/32/64 geometric resolution grid.",
     "tsmini_cellspace_buffer": "The 500 m buffer is the public TSMini reference preprocessing value and prevents boundary-normalization degeneracy; it is derived around training coordinates only.",

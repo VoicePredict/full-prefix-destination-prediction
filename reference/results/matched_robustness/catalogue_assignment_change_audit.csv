@@ -1,0 +1,9 @@
+method,ratio,trajectories,changed_predictions,users_with_changed_prediction
+grid_full_prefix,0.25,1475,21,3
+grid_full_prefix,0.5,1475,40,3
+grid_full_prefix,0.66,1475,35,4
+grid_full_prefix,0.75,1475,33,6
+grid_last_state_only,0.25,1475,66,6
+grid_last_state_only,0.5,1475,27,2
+grid_last_state_only,0.66,1475,42,5
+grid_last_state_only,0.75,1475,25,5

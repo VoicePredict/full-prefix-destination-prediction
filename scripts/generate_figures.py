@@ -3,7 +3,10 @@
 
 from __future__ import annotations
 
+import argparse
+import json
 from pathlib import Path
+from collections.abc import Sequence
 from xml.sax.saxutils import escape
 
 import numpy as np
@@ -11,7 +14,9 @@ import pandas as pd
 
 
 ARTIFACT = Path(__file__).resolve().parents[1]
-REFERENCE = ARTIFACT / "reference" / "results"
+DEFAULT_BUNDLE = ARTIFACT / "reference"
+MANIFESTS = DEFAULT_BUNDLE / "manifests"
+REFERENCE = DEFAULT_BUNDLE / "results"
 MATCHED = REFERENCE / "matched_ablation"
 MATCHED_ROBUSTNESS = REFERENCE / "matched_robustness"
 MATCHED_DIAGNOSTIC = REFERENCE / "matched_diagnostics"
@@ -25,7 +30,7 @@ COLORS = {
     "current_position_only_personal_retrieval": "#4D4D4D",
     "geometric_retrieval": "#009E73",
     "tsmini": "#D55E00",
-    "bigru": "#CC79A7",
+    "recurrent": "#CC79A7",
 }
 NAMES = {
     "probabilistic_grid_pattern_retrieval": "Grid pattern",
@@ -34,7 +39,7 @@ NAMES = {
     "current_position_only_personal_retrieval": "Current position",
     "geometric_retrieval": "Geometric",
     "tsmini": "TSMini",
-    "bigru": "GRU",
+    "recurrent": "GRU",
 }
 
 
@@ -430,13 +435,44 @@ def user_effect_figure() -> None:
 
 
 def protocol_flow_figure() -> None:
+    cohorts = pd.read_csv(MANIFESTS / "cohort_manifest.csv", dtype="string")
+    truth = cohorts.apply(lambda column: column.str.lower() == "true")
+    eligible_users = int(truth["eligibility"].sum())
+    discovery_users = int(truth["discovery_membership"].sum())
+    evaluation_users = int(truth["evaluation_membership"].sum())
+    preliminary_users = int(
+        (
+            truth["eligibility"]
+            & truth["prior_use"]
+            & ~truth["discovery_membership"]
+        ).sum()
+    )
+    discovery_summary = json.loads(
+        (REFERENCE / "discovery/preparation/preparation_summary.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    evaluation_summary = json.loads(
+        (MANIFESTS / "preparation_summary.json").read_text(encoding="utf-8")
+    )
+    discovery_partitions = discovery_summary["partition_counts"]
+    evaluation_partitions = evaluation_summary["partition_counts"]
+    discovery_trajectories = int(discovery_summary["selected_trajectories"])
+    evaluation_trajectories = int(evaluation_summary["selected_trajectories"])
+    evaluation_training = int(evaluation_partitions["fit"]) + int(
+        evaluation_partitions["validation"]
+    )
+    evaluation_test = int(evaluation_partitions["test"])
+
     width, height = 930, 245
     parts = [
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}">',
         '<rect width="100%" height="100%" fill="white"/>',
     ]
-    parts.extend(box(20, 86, 120, 58, ["Eligible users", "n = 76"], "#F2F2F2"))
+    parts.extend(
+        box(20, 86, 120, 58, ["Eligible users", f"n = {eligible_users}"], "#F2F2F2")
+    )
     parts.extend(arrow(140, 115, 185, 45))
     parts.extend(arrow(140, 115, 185, 115))
     parts.extend(arrow(140, 115, 185, 183))
@@ -446,7 +482,11 @@ def protocol_flow_figure() -> None:
             15,
             145,
             60,
-            ["Discovery cohort", "30 users", "4,543 trajectories"],
+            [
+                "Discovery cohort",
+                f"{discovery_users} users",
+                f"{discovery_trajectories:,} trajectories",
+            ],
             "#DDEBF7",
             "#0072B2",
         )
@@ -457,7 +497,11 @@ def protocol_flow_figure() -> None:
             85,
             145,
             60,
-            ["Earlier preliminary", "9 users", "excluded from evaluation"],
+            [
+                "Earlier preliminary",
+                f"{preliminary_users} users",
+                "excluded from evaluation",
+            ],
             "#F7E6D5",
             "#D55E00",
         )
@@ -468,7 +512,11 @@ def protocol_flow_figure() -> None:
             153,
             145,
             60,
-            ["Final evaluation", "37 users", "5,845 trajectories"],
+            [
+                "Final evaluation",
+                f"{evaluation_users} users",
+                f"{evaluation_trajectories:,} trajectories",
+            ],
             "#DFF0E8",
             "#009E73",
         )
@@ -480,7 +528,11 @@ def protocol_flow_figure() -> None:
             15,
             150,
             60,
-            ["Selection partitions", "2,712 fit; 682 validation"],
+            [
+                "Selection partitions",
+                f"{int(discovery_partitions['fit']):,} fit; "
+                f"{int(discovery_partitions['validation']):,} validation",
+            ],
             "#DDEBF7",
             "#0072B2",
         )
@@ -509,7 +561,11 @@ def protocol_flow_figure() -> None:
             153,
             150,
             60,
-            ["Earlier 75% history", "4,370 trajectories", "personal fitting"],
+            [
+                "Earlier 75% history",
+                f"{evaluation_training:,} trajectories",
+                "personal fitting",
+            ],
             "#DFF0E8",
             "#009E73",
         )
@@ -521,7 +577,11 @@ def protocol_flow_figure() -> None:
             153,
             150,
             60,
-            ["Later 25% test", "1,475 trajectories", "predict before labels"],
+            [
+                "Later 25% test",
+                f"{evaluation_test:,} trajectories",
+                "predict before labels",
+            ],
             "#DFF0E8",
             "#009E73",
         )
@@ -532,7 +592,8 @@ def protocol_flow_figure() -> None:
         text(
             455,
             91,
-            "1,149 discovery-test trajectories excluded from selection",
+            f"{int(discovery_partitions['test']):,} discovery-test trajectories "
+            "excluded from selection",
             text_anchor="middle",
             font_size="10",
             fill="#555555",
@@ -552,12 +613,44 @@ def protocol_flow_figure() -> None:
     (OUT / "protocol_flow.svg").write_text("\n".join(parts), encoding="utf-8")
 
 
-def main() -> int:
+def parser() -> argparse.ArgumentParser:
+    result = argparse.ArgumentParser(
+        description="Generate manuscript SVG figures from a normalized result bundle."
+    )
+    result.add_argument(
+        "--bundle-root",
+        type=Path,
+        default=DEFAULT_BUNDLE,
+        help="Bundle containing manifests/, predictions/, and results/.",
+    )
+    result.add_argument(
+        "--output-root",
+        type=Path,
+        default=OUT,
+        help="Directory receiving the SVG figures.",
+    )
+    return result
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    global MANIFESTS, REFERENCE, MATCHED, MATCHED_ROBUSTNESS, MATCHED_DIAGNOSTIC, OUT
+    arguments = parser().parse_args(argv)
+    bundle_root = arguments.bundle_root.expanduser().resolve()
+    MANIFESTS = bundle_root / "manifests"
+    REFERENCE = bundle_root / "results"
+    MATCHED = REFERENCE / "matched_ablation"
+    MATCHED_ROBUSTNESS = REFERENCE / "matched_robustness"
+    MATCHED_DIAGNOSTIC = REFERENCE / "matched_diagnostics"
+    OUT = arguments.output_root.expanduser().resolve()
     OUT.mkdir(parents=True, exist_ok=True)
     observation_ratio_figure()
     user_effect_figure()
     protocol_flow_figure()
-    print(f"Generated SVG figures in {OUT.relative_to(ARTIFACT)}")
+    try:
+        display = OUT.relative_to(ARTIFACT)
+    except ValueError:
+        display = OUT
+    print(f"Generated SVG figures in {display}")
     return 0
 
 

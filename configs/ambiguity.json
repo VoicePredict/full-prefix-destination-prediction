@@ -37,7 +37,7 @@
     "probabilistic_grid_pattern_retrieval",
     "geometric_retrieval",
     "tsmini",
-    "bigru",
+    "recurrent",
     "current_position_only_personal_retrieval",
     "most_frequent_personal_destination"
   ],

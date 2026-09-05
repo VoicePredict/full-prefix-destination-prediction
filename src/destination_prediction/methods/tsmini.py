@@ -14,19 +14,32 @@ import pandas as pd
 import torch
 
 from destination_prediction.catalogue import build_catalogue
-from destination_prediction.context import RunContext, implementation_constants
+from destination_prediction.context import RunContext, implementation_constants, parse_run_context
 from destination_prediction.data import add_local_sequences, load_marked, partitions, user_origins
 from destination_prediction.geometry import prefix_cutoff, resample_path
 from destination_prediction.metrics import evaluate_native_predictions, selection_summary
 
 
 TSMINI_ROOT = Path(__file__).resolve().parents[3] / "third_party" / "TSMini"
+if not (TSMINI_ROOT / "model" / "tsmini.py").is_file():
+    raise RuntimeError(
+        "Pinned TSMini source is missing; run python3 scripts/reproduce.py setup "
+        "before the full workflow."
+    )
+# The upstream revision is not packaged.  Its root is exposed only while the
+# ordinary upstream imports are resolved; the public artifact path is not left
+# on sys.path after this compatibility boundary.
+_ORIGINAL_SYS_PATH = sys.path[:]
 sys.path.insert(0, str(TSMINI_ROOT))
 
-from config import Config  # noqa: E402
-from model.lambdaloss import lambdaLoss  # noqa: E402
-from model.tsmini import TSMini  # noqa: E402
-from utils.traj import padding_traj, preprocess_traj  # noqa: E402
+try:
+    from config import Config  # noqa: E402
+    from model.lambdaloss import lambdaLoss  # noqa: E402
+    from model.tsmini import TSMini  # noqa: E402
+    from utils.traj import padding_traj, preprocess_traj  # noqa: E402
+finally:
+    sys.path[:] = _ORIGINAL_SYS_PATH
+    del _ORIGINAL_SYS_PATH
 
 
 def set_seed(seed: int) -> None:
@@ -345,6 +358,7 @@ def selected_configuration(
 
 def run(context: RunContext) -> dict[str, object]:
     config = context.config
+    context.require_fixed_configurations_match()
     output = context.run_directory / "outputs" / "tsmini"
     output.mkdir(parents=True, exist_ok=True)
     marked = load_marked(context.run_directory)
@@ -435,7 +449,7 @@ def run(context: RunContext) -> dict[str, object]:
 
 
 def main() -> int:
-    summary = run(RunContext.from_environment())
+    summary = run(parse_run_context(description=__doc__))
     print(json.dumps(summary, indent=2), flush=True)
     return 0
 

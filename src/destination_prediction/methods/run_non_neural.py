@@ -9,7 +9,7 @@ from pathlib import Path
 import pandas as pd
 
 from destination_prediction.catalogue import build_catalogue
-from destination_prediction.context import RunContext
+from destination_prediction.context import RunContext, parse_run_context
 from destination_prediction.data import (
     add_local_sequences,
     load_marked,
@@ -83,6 +83,7 @@ def write_selection(
 
 def run(context: RunContext) -> dict[str, object]:
     config = context.config
+    context.require_fixed_configurations_match()
     marked = load_marked(context.run_directory)
     ratios = list(map(float, config["task"]["observation_ratios"]))
     primary_eps = float(config["task"]["primary_dbscan_eps_m"])
@@ -113,6 +114,7 @@ def run(context: RunContext) -> dict[str, object]:
             list(map(float, grid_config["emission_sigma_cells"])),
             list(map(int, grid_config["posterior_top_k"])),
             int(grid_config["alignment_states"]),
+            tie_rule=str(grid_config["candidate_tie_rule"]),
         )
         validation_evaluated = evaluate_predictions(
             pd.concat([geometric_native, grid_native], ignore_index=True),
@@ -137,15 +139,24 @@ def run(context: RunContext) -> dict[str, object]:
             output / "grid_pattern_selection",
             config,
         )
+        grid_selected.update(
+            {
+                "alignment_states": int(grid_config["alignment_states"]),
+                "candidate_tie_rule": str(grid_config["candidate_tie_rule"]),
+            }
+        )
+        (output / "grid_pattern_selection" / "selected_config.json").write_text(
+            json.dumps(grid_selected, indent=2) + "\n", encoding="utf-8"
+        )
     else:
         geometric_selected = {
             **fixed["geometric_retrieval"],
-            "selection_source": "frozen discovery validation",
+            "selection_source": "frozen 30-user discovery validation",
             "outer_test_read": False,
         }
         grid_selected = {
             **fixed[GRID_FAMILY],
-            "selection_source": "frozen discovery validation",
+            "selection_source": "frozen 30-user discovery validation",
             "outer_test_read": False,
         }
         for directory, selected in (
@@ -175,6 +186,7 @@ def run(context: RunContext) -> dict[str, object]:
         [float(grid_selected["emission_sigma_cells"])],
         [int(grid_selected["posterior_top_k"])],
         int(grid_selected["alignment_states"]),
+        tie_rule=str(grid_selected["candidate_tie_rule"]),
     )
     final_evaluated = evaluate_predictions(
         pd.concat(
@@ -202,7 +214,7 @@ def run(context: RunContext) -> dict[str, object]:
 
 
 def main() -> int:
-    summary = run(RunContext.from_environment())
+    summary = run(parse_run_context(description=__doc__))
     print(json.dumps(summary, indent=2), flush=True)
     return 0
 

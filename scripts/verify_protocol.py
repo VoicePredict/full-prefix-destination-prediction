@@ -29,10 +29,24 @@ def main() -> int:
     expanded_users = {
         int(row["user_id"]) for row in cohorts if row["expanded_membership"] == "true"
     }
+    eligible_users = {
+        int(row["user_id"]) for row in cohorts if row["eligibility"] == "true"
+    }
+    eligible_prior_users = {
+        int(row["user_id"])
+        for row in cohorts
+        if row["eligibility"] == "true" and row["prior_use"] == "true"
+    }
+    assert len(cohorts) == 182
+    assert len({int(row["user_id"]) for row in cohorts}) == 182
+    assert len(eligible_users) == 76
     assert len(discovery_users) == discovery["dataset"]["cohort_users"] == 30
     assert len(evaluation_users) == evaluation["dataset"]["cohort_users"] == 37
     assert len(expanded_users) == expanded["dataset"]["cohort_users"] == 46
     assert discovery_users.isdisjoint(evaluation_users)
+    assert discovery_users | evaluation_users | (expanded_users - evaluation_users) == eligible_users
+    assert len(eligible_prior_users - discovery_users) == 9
+    assert expanded_users - evaluation_users == eligible_prior_users - discovery_users
     assert evaluation_users == set(evaluation["dataset"]["include_user_ids"])
     assert expanded_users == evaluation_users | (expanded_users - evaluation_users)
     assert len(expanded_users - evaluation_users) == 9
@@ -54,6 +68,8 @@ def main() -> int:
         json.dumps(
             {
                 "status": "passed",
+                "source_users": len(cohorts),
+                "eligible_users": len(eligible_users),
                 "discovery_users": len(discovery_users),
                 "frozen_evaluation_users": len(evaluation_users),
                 "overlapping_expanded_users": len(expanded_users),

@@ -10,17 +10,18 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from destination_prediction.context import RunContext
+from destination_prediction.context import RunContext, parse_run_context
 from destination_prediction.protocol import EvaluationProtocol
 
 
-CONTEXT = RunContext.from_environment()
-EXP_DIR = CONTEXT.run_directory
-CONFIG = CONTEXT.config
-OUTPUT = EXP_DIR / "outputs"
-CASES = OUTPUT / "cases"
-TABLES = OUTPUT / "tables"
-CHECKS = OUTPUT / "checks"
+def _configure(context: RunContext) -> None:
+    global CONTEXT, CONFIG, OUTPUT, CASES, TABLES, CHECKS
+    CONTEXT = context
+    CONFIG = context.config
+    OUTPUT = context.run_directory / "outputs"
+    CASES = OUTPUT / "cases"
+    TABLES = OUTPUT / "tables"
+    CHECKS = OUTPUT / "checks"
 
 
 def source_path(cohort: str) -> Path:
@@ -41,7 +42,7 @@ def prepare_cohort(cohort: str):
     train = protocol.add_local_sequences(train, origins)
     test = protocol.add_local_sequences(test, origins)
     catalog = protocol.build_catalog(train, float(CONFIG["catalog_eps_m"]))
-    cluster_map = protocol.endpoint_cluster_map(train, catalog)
+    cluster_map = protocol.endpoint_catalogue_assignment(train, catalog)
     return protocol, train, test, catalog, cluster_map
 
 
@@ -652,7 +653,8 @@ def point_coverage_outputs(predictions: pd.DataFrame) -> None:
     ).to_csv(TABLES / "point_error_and_coverage_metrics.csv", index=False)
 
 
-def main() -> int:
+def run(context: RunContext) -> int:
+    _configure(context)
     for directory in [CASES, TABLES, CHECKS]:
         directory.mkdir(parents=True, exist_ok=True)
     prepared = {}
@@ -710,6 +712,10 @@ def main() -> int:
     )
     print(json.dumps(summary, indent=2), flush=True)
     return 0
+
+
+def main() -> int:
+    return run(parse_run_context(description=__doc__))
 
 
 if __name__ == "__main__":

@@ -8,13 +8,13 @@ import json
 import numpy as np
 import pandas as pd
 
-from destination_prediction.context import RunContext
+from destination_prediction.context import RunContext, parse_run_context
 
 
-CONTEXT = RunContext.from_environment()
-EXP_DIR = CONTEXT.run_directory
-OUTPUT = EXP_DIR / "outputs"
-CONFIG = CONTEXT.config
+def _configure(context: RunContext) -> None:
+    global OUTPUT, CONFIG
+    OUTPUT = context.run_directory / "outputs"
+    CONFIG = context.config
 
 
 def require(condition: bool, message: str) -> None:
@@ -22,8 +22,9 @@ def require(condition: bool, message: str) -> None:
         raise AssertionError(message)
 
 
-def main() -> int:
-    config = load_config()
+def validate(context: RunContext) -> int:
+    _configure(context)
+    config = CONFIG
     summary = json.loads(
         (OUTPUT / "analysis_summary.json").read_text(encoding="utf-8")
     )
@@ -93,6 +94,10 @@ def main() -> int:
     )
     print(json.dumps(report, indent=2), flush=True)
     return 0
+
+
+def main() -> int:
+    return validate(parse_run_context(description=__doc__))
 
 
 if __name__ == "__main__":

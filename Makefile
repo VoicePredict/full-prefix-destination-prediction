@@ -4,12 +4,13 @@ PYTHON ?= python3
 VENV_PYTHON ?= .venv/bin/python
 DATA_ROOT ?= data/Geolife
 OUTPUT_ROOT ?= work/runs
+DATA_CHECK ?= full
 
 verify:
 	$(PYTHON) scripts/reproduce.py verify
 
 setup:
-	$(PYTHON) scripts/reproduce.py setup
+	$(PYTHON) scripts/reproduce.py setup --data-root "$(DATA_ROOT)"
 
 results:
 	$(VENV_PYTHON) scripts/reproduce.py results
@@ -21,27 +22,28 @@ figures:
 	$(VENV_PYTHON) scripts/generate_figures.py
 
 environment:
-	python3.10 -m venv .venv
+	$(PYTHON) -c 'import sys; version = sys.version_info[:2]; sys.exit("Python 3.10 is required; set PYTHON to its executable (found %d.%d)." % version) if version != (3, 10) else None'
+	$(PYTHON) -m venv .venv
 	.venv/bin/python -m pip install --upgrade pip
-	.venv/bin/python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu -r requirements.txt
+	.venv/bin/python -m pip install --extra-index-url https://download.pytorch.org/whl/cpu -c constraints.txt -r requirements.txt
 	.venv/bin/python -m pip install --no-deps -e .
 
 data-check:
-	$(PYTHON) scripts/verify_geolife.py $(DATA_ROOT)
+	$(PYTHON) scripts/verify_geolife.py "$(DATA_ROOT)"
 
 plan:
-	$(PYTHON) scripts/reproduce.py full --data-root $(DATA_ROOT) --output-root $(OUTPUT_ROOT) --dry-run
+	$(PYTHON) scripts/reproduce.py full --data-root "$(DATA_ROOT)" --output-root "$(OUTPUT_ROOT)" --dry-run
 
 test:
 	$(VENV_PYTHON) -m unittest discover -s tests -v
 
 full:
-	$(VENV_PYTHON) scripts/reproduce.py full --data-root $(DATA_ROOT) --output-root $(OUTPUT_ROOT)
+	$(VENV_PYTHON) scripts/reproduce.py full --data-root "$(DATA_ROOT)" --output-root "$(OUTPUT_ROOT)" --data-check "$(DATA_CHECK)"
 
 reproduce:
-	$(PYTHON) scripts/reproduce.py setup
+	$(MAKE) verify
 	$(MAKE) environment
+	$(PYTHON) scripts/reproduce.py setup --data-root "$(DATA_ROOT)"
 	$(MAKE) test
-	$(MAKE) full
-	$(MAKE) results
+	$(MAKE) full DATA_CHECK=paths
 	$(MAKE) verify

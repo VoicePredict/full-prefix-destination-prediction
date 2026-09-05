@@ -5,7 +5,7 @@
     "geometric_retrieval",
     "probabilistic_grid_pattern_retrieval",
     "tsmini",
-    "bigru"
+    "recurrent"
   ],
   "baseline_methods": [
     "most_frequent_personal_destination",

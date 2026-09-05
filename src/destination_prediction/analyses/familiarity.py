@@ -10,29 +10,36 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from destination_prediction.context import RunContext, implementation_constants
+from destination_prediction.context import (
+    RunContext,
+    implementation_constants,
+    parse_run_context,
+)
 from destination_prediction.data import add_local_sequences, load_marked, partitions, user_origins
 from destination_prediction.geometry import prefix_cutoff, resample_path
 
 
-CONTEXT = RunContext.from_environment()
-CONFIG = CONTEXT.config
-EXP_DIR = CONTEXT.run_directory
-
-
-PRIMARY_EPS_M = float(CONFIG["task"]["primary_dbscan_eps_m"])
-PRIMARY_SUPPORT_QUANTILE = float(CONFIG["task"]["primary_support_quantile"])
-PRIMARY_SUPPORT_TOKEN = int(round(100 * PRIMARY_SUPPORT_QUANTILE))
-ANALOGUE_QUANTILES = tuple(
-    float(value) for value in CONFIG["evaluation"]["support_quantiles"]
-)
-ANALOGUE_RESAMPLE_POINTS = int(
-    implementation_constants(CONFIG, "tsmini_inspired_retrieval")[
-        "target_resample_points"
-    ]
-)
-BOOTSTRAP_REPLICATES = int(CONFIG["evaluation"]["bootstrap"]["replicates"])
-BOOTSTRAP_SEED = int(CONFIG["evaluation"]["bootstrap"]["seed"])
+def _configure(context: RunContext) -> None:
+    global CONTEXT, CONFIG, EXP_DIR
+    global PRIMARY_EPS_M, PRIMARY_SUPPORT_QUANTILE, PRIMARY_SUPPORT_TOKEN
+    global ANALOGUE_QUANTILES, ANALOGUE_RESAMPLE_POINTS
+    global BOOTSTRAP_REPLICATES, BOOTSTRAP_SEED
+    CONTEXT = context
+    CONFIG = context.config
+    EXP_DIR = context.run_directory
+    PRIMARY_EPS_M = float(CONFIG["task"]["primary_dbscan_eps_m"])
+    PRIMARY_SUPPORT_QUANTILE = float(CONFIG["task"]["primary_support_quantile"])
+    PRIMARY_SUPPORT_TOKEN = int(round(100 * PRIMARY_SUPPORT_QUANTILE))
+    ANALOGUE_QUANTILES = tuple(
+        float(value) for value in CONFIG["evaluation"]["support_quantiles"]
+    )
+    ANALOGUE_RESAMPLE_POINTS = int(
+        implementation_constants(CONFIG, "tsmini_inspired_retrieval")[
+            "target_resample_points"
+        ]
+    )
+    BOOTSTRAP_REPLICATES = int(CONFIG["evaluation"]["bootstrap"]["replicates"])
+    BOOTSTRAP_SEED = int(CONFIG["evaluation"]["bootstrap"]["seed"])
 
 
 def load_case_predictions() -> pd.DataFrame:
@@ -354,7 +361,8 @@ def bootstrap_all_strata(
     return pd.concat(outputs, ignore_index=True) if outputs else pd.DataFrame()
 
 
-def main() -> int:
+def run(context: RunContext) -> int:
+    _configure(context)
     output = EXP_DIR / "outputs/analysis"
     output.mkdir(parents=True, exist_ok=True)
     predictions = load_case_predictions()
@@ -522,6 +530,10 @@ def main() -> int:
     )
     print(json.dumps(summary, indent=2), flush=True)
     return 0
+
+
+def main() -> int:
+    return run(parse_run_context(description=__doc__))
 
 
 if __name__ == "__main__":

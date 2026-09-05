@@ -1,0 +1,14 @@
+.DS_Store
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.mypy_cache/
+data/Geolife/
+work/
+third_party/TSMini/*
+!third_party/TSMini/VENDOR_PROVENANCE.md
+!third_party/TSMini/VENDOR_FILES.sha256
+results/figures/*.pdf
+!results/figures/.gitkeep

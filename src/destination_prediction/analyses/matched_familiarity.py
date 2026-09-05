@@ -8,17 +8,19 @@ import json
 import numpy as np
 import pandas as pd
 
-from destination_prediction.context import RunContext
+from destination_prediction.context import RunContext, parse_run_context
 
 
-CONTEXT = RunContext.from_environment()
-EXP_DIR = CONTEXT.run_directory
-CONFIG = CONTEXT.config
-PREDICTION_SOURCE = CONTEXT.dependency_outputs(CONFIG["prediction_source"])
-FAMILIARITY_SOURCE = CONTEXT.dependency_outputs(CONFIG["familiarity_source"]) / "analysis"
-OUTPUT = EXP_DIR / "outputs"
-FULL = str(CONFIG["full_method"])
-LAST = str(CONFIG["ablation_method"])
+def _configure(context: RunContext) -> None:
+    global CONFIG, PREDICTION_SOURCE, FAMILIARITY_SOURCE, OUTPUT, FULL, LAST
+    CONFIG = context.config
+    PREDICTION_SOURCE = context.dependency_outputs(CONFIG["prediction_source"])
+    FAMILIARITY_SOURCE = (
+        context.dependency_outputs(CONFIG["familiarity_source"]) / "analysis"
+    )
+    OUTPUT = context.run_directory / "outputs"
+    FULL = str(CONFIG["full_method"])
+    LAST = str(CONFIG["ablation_method"])
 
 
 def joined_cases() -> pd.DataFrame:
@@ -125,7 +127,8 @@ def bootstrap(cases: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def main() -> int:
+def run(context: RunContext) -> int:
+    _configure(context)
     OUTPUT.mkdir(parents=True, exist_ok=True)
     cases = joined_cases()
     cases.to_csv(OUTPUT / "matched_familiarity_cases.csv", index=False)
@@ -149,6 +152,10 @@ def main() -> int:
     )
     print(json.dumps(summary, indent=2))
     return 0
+
+
+def main() -> int:
+    return run(parse_run_context(description=__doc__))
 
 
 if __name__ == "__main__":

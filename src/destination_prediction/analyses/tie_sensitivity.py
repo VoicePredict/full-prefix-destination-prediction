@@ -7,94 +7,29 @@ import json
 import numpy as np
 import pandas as pd
 
-from destination_prediction.context import RunContext
-from destination_prediction.methods.grid_pattern_retrieval import resampled_cells
+from destination_prediction.context import RunContext, parse_run_context
+from destination_prediction.methods.grid_pattern_retrieval import (
+    emit_destination_region,
+    resampled_cells,
+)
 from destination_prediction.protocol import EvaluationProtocol
 
 
-CONTEXT = RunContext.from_environment()
-EXP_DIR = CONTEXT.run_directory
-CONFIG = CONTEXT.config
-SOURCE = CONTEXT.dependency_directory(CONFIG["source_experiment"])
-BASE_CONFIG = CONTEXT.dependency_context(CONFIG["source_experiment"]).config
-OUTPUT = EXP_DIR / "outputs"
-FULL = str(CONFIG["full_method"])
-LAST = str(CONFIG["ablation_method"])
-RATIOS = list(map(float, CONFIG["observation_ratios"]))
-ATOL = float(CONFIG["distance_tolerance"])
-
-
-PROTOCOL = EvaluationProtocol(
-    CONTEXT.dependency_context(BASE_CONFIG["source_experiment"])
-)
-
-
-def legacy_emit_region(
-    squared: np.ndarray, regions: np.ndarray, sigma: float, top_k: int
-) -> int:
-    scores = -0.5 * squared / max(float(sigma) ** 2, 1e-12)
-    scores -= float(np.max(scores))
-    posterior = np.exp(scores)
-    posterior /= float(posterior.sum())
-    selected = np.argsort(-posterior)[: min(int(top_k), len(posterior))]
-    mass: dict[int, float] = {}
-    for position in selected:
-        region = int(regions[position])
-        mass[region] = mass.get(region, 0.0) + float(posterior[position])
-    return int(sorted(mass, key=lambda region: (-mass[region], region))[0])
-
-
-def candidate_order(
-    squared: np.ndarray,
-    trip_ids: np.ndarray,
-    top_k: int,
-    tie_rule: str,
-) -> np.ndarray:
-    limit = min(int(top_k), len(squared))
-    if tie_rule == "legacy":
-        scores = -0.5 * squared / max(
-            float(BASE_CONFIG["frozen_grid_configuration"]["emission_sigma_cells"]) ** 2,
-            1e-12,
-        )
-        scores -= float(np.max(scores))
-        posterior = np.exp(scores)
-        posterior /= float(posterior.sum())
-        return np.argsort(-posterior)[:limit]
-    order = np.lexsort((trip_ids.astype(str), squared))
-    if tie_rule == "trajectory_id":
-        return order[:limit]
-    if tie_rule == "include_boundary":
-        boundary = float(squared[order[limit - 1]])
-        return order[np.isclose(squared[order], boundary, rtol=0.0, atol=ATOL) | (squared[order] < boundary)]
-    raise ValueError(f"Unknown tie rule: {tie_rule}")
-
-
-def emit(
-    squared: np.ndarray,
-    trip_ids: np.ndarray,
-    regions: np.ndarray,
-    sigma: float,
-    top_k: int,
-    tie_rule: str,
-) -> tuple[int, int, bool]:
-    if tie_rule == "legacy":
-        emitted = legacy_emit_region(squared, regions, sigma, top_k)
-        return emitted, min(int(top_k), len(squared)), False
-    scores = -0.5 * squared / max(float(sigma) ** 2, 1e-12)
-    scores -= float(np.max(scores))
-    posterior = np.exp(scores)
-    posterior /= float(posterior.sum())
-    selected = candidate_order(squared, trip_ids, top_k, tie_rule)
-    mass: dict[int, float] = {}
-    for position in selected:
-        region = int(regions[position])
-        mass[region] = mass.get(region, 0.0) + float(posterior[position])
-    emitted = sorted(mass, key=lambda region: (-mass[region], region))[0]
-    largest = mass[emitted]
-    tied_regions = [
-        region for region, value in mass.items() if value == largest
-    ]
-    return int(emitted), int(len(selected)), bool(len(tied_regions) > 1)
+def _configure(context: RunContext) -> None:
+    global CONTEXT, CONFIG, SOURCE, BASE_CONFIG, OUTPUT
+    global FULL, LAST, RATIOS, ATOL, PROTOCOL
+    CONTEXT = context
+    CONFIG = context.config
+    SOURCE = context.dependency_directory(CONFIG["source_experiment"])
+    BASE_CONFIG = context.dependency_context(CONFIG["source_experiment"]).config
+    OUTPUT = context.run_directory / "outputs"
+    FULL = str(CONFIG["full_method"])
+    LAST = str(CONFIG["ablation_method"])
+    RATIOS = list(map(float, CONFIG["observation_ratios"]))
+    ATOL = float(CONFIG["distance_tolerance"])
+    PROTOCOL = EvaluationProtocol(
+        context.dependency_context(BASE_CONFIG["source_experiment"])
+    )
 
 
 def boundary_diagnostic(squared: np.ndarray, top_k: int) -> dict[str, object]:
@@ -121,7 +56,7 @@ def predictions() -> tuple[pd.DataFrame, pd.DataFrame]:
     catalog = PROTOCOL.build_catalog(
         train, float(PROTOCOL.CONFIG["task"]["primary_dbscan_eps_m"])
     )
-    cluster_map = PROTOCOL.endpoint_cluster_map(train, catalog)
+    cluster_map = PROTOCOL.endpoint_catalogue_assignment(train, catalog)
     train_by_user = {
         int(user): frame.reset_index(drop=True)
         for user, frame in train.groupby("user_id", sort=True)
@@ -183,14 +118,19 @@ def predictions() -> tuple[pd.DataFrame, pd.DataFrame]:
                     }
                 )
                 for variant in CONFIG["variants"]:
-                    region, pool_size, mass_tie = emit(
+                    tie_rule = str(variant["tie_rule"])
+                    region, _mass, pool_size, mass_tie = emit_destination_region(
                         squared,
                         identifiers[user],
                         regions[user],
                         sigma,
                         int(variant["top_k"]),
-                        str(variant["tie_rule"]),
+                        tie_rule,
+                        ATOL,
                     )
+                    if tie_rule == "legacy":
+                        # The historical audit did not diagnose mass ties.
+                        mass_tie = False
                     center = centers_by_user[user].loc[region]
                     rows.append(
                         {
@@ -347,7 +287,8 @@ def reproduction_audit(cases: pd.DataFrame) -> pd.DataFrame:
     return audit
 
 
-def main() -> int:
+def run(context: RunContext) -> int:
+    _configure(context)
     OUTPUT.mkdir(parents=True, exist_ok=True)
     cases, ties = predictions()
     cases.to_csv(OUTPUT / "tie_sensitivity_predictions.csv", index=False)
@@ -386,6 +327,10 @@ def main() -> int:
     )
     print(json.dumps(summary, indent=2), flush=True)
     return 0
+
+
+def main() -> int:
+    return run(parse_run_context(description=__doc__))
 
 
 if __name__ == "__main__":

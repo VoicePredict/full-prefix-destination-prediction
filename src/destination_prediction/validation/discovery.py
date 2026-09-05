@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail the server run unless protocol and output invariants are satisfied."""
+"""Fail the discovery run unless protocol and output invariants are satisfied."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ from pathlib import Path
 
 import pandas as pd
 
-from destination_prediction.context import RunContext
+from destination_prediction.context import RunContext, parse_run_context
 
 
-CONTEXT = RunContext.from_environment()
-EXP_DIR = CONTEXT.run_directory
-OUTPUT = EXP_DIR / "outputs"
-CONFIG = CONTEXT.config
+def _configure(context: RunContext) -> None:
+    global OUTPUT, CONFIG
+    OUTPUT = context.run_directory / "outputs"
+    CONFIG = context.config
 
 
 def require(condition: bool, message: str) -> None:
@@ -34,7 +34,8 @@ def unique_cases(path: Path, expected_rows: int, seeds: int) -> dict[str, int]:
     return {"rows": int(len(frame)), "unique_cases": int(frame[["user_id", "trip_id"]].drop_duplicates().shape[0])}
 
 
-def main() -> int:
+def validate(context: RunContext) -> int:
+    _configure(context)
     preparation = json.loads(
         (OUTPUT / "preparation/preparation_summary.json").read_text(encoding="utf-8")
     )
@@ -61,8 +62,8 @@ def main() -> int:
             test_trips * ratios * 6,
             1,
         ),
-        "bigru": unique_cases(
-            OUTPUT / "bigru/test_predictions_by_seed.csv",
+        "recurrent": unique_cases(
+            OUTPUT / "recurrent/test_predictions_by_seed.csv",
             test_trips * ratios * seeds,
             seeds,
         ),
@@ -74,7 +75,7 @@ def main() -> int:
     }
 
     expected_seeds = set(map(int, CONFIG["selection"]["final_neural_seeds"]))
-    for family in ["bigru", "tsmini"]:
+    for family in ["recurrent", "tsmini"]:
         frame = pd.read_csv(OUTPUT / family / "test_predictions_by_seed.csv")
         require(set(map(int, frame["seed"].unique())) == expected_seeds, f"{family}: seed mismatch")
 
@@ -90,8 +91,8 @@ def main() -> int:
 
     for path in [
         OUTPUT / "non_neural/geometric_selection/selected_config.json",
-        OUTPUT / "non_neural/hmm_selection/selected_config.json",
-        OUTPUT / "bigru/selected_config.json",
+        OUTPUT / "non_neural/grid_pattern_selection/selected_config.json",
+        OUTPUT / "recurrent/selected_config.json",
         OUTPUT / "tsmini/selected_config.json",
     ]:
         selected = json.loads(path.read_text(encoding="utf-8"))
@@ -104,6 +105,7 @@ def main() -> int:
         "paired_hierarchical_bootstrap.csv",
         "quality_sensitivity_user_macro_seed_summary.csv",
         "evaluation_audit.json",
+        "catalogue_assignment_audit.json",
     ]
     for name in required_final:
         require((OUTPUT / "final" / name).exists(), f"Missing final output: {name}")
@@ -120,6 +122,10 @@ def main() -> int:
     )
     print(json.dumps(report, indent=2), flush=True)
     return 0
+
+
+def main() -> int:
+    return validate(parse_run_context(description=__doc__))
 
 
 if __name__ == "__main__":

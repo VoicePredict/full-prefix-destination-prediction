@@ -8,9 +8,20 @@
     "expanded_users_46": true,
     "expanded_trajectories_2888": true,
     "expanded_rows": true,
+    "dbscan_membership_rows": true,
+    "dbscan_membership_users_37": true,
+    "dbscan_membership_trajectories_1475": true,
+    "catalogue_assignment_rows_23600": true,
+    "catalogue_assignment_rules": true,
+    "catalogue_assignment_bootstrap_rows": true,
+    "catalogue_assignment_change_rows": true,
     "canonical_audit_exact": true,
+    "canonical_cross_method_cases": true,
     "robustness_intervals_ordered": true,
     "cross_intervals_ordered": true,
-    "deterministic_rule": true
+    "deterministic_rule": true,
+    "dbscan_membership_summary": true,
+    "dbscan_membership_analysis_present": true,
+    "catalogue_assignment_stage_direction_retained": true
   }
 }

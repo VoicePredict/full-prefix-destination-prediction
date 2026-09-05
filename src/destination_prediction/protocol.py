@@ -8,7 +8,8 @@ import pandas as pd
 
 from destination_prediction.catalogue import (
     build_catalogue,
-    endpoint_cluster_map,
+    dbscan_component_assignment,
+    endpoint_catalogue_assignment,
     nearest_catalogue_center,
 )
 from destination_prediction.context import RunContext
@@ -68,8 +69,17 @@ class EvaluationProtocol:
     build_catalog = build_catalogue
 
     @staticmethod
-    def endpoint_cluster_map(train: pd.DataFrame, catalogue: pd.DataFrame):
-        return endpoint_cluster_map(train, catalogue)
+    def endpoint_catalogue_assignment(train: pd.DataFrame, catalogue: pd.DataFrame):
+        return endpoint_catalogue_assignment(train, catalogue)
+
+    def dbscan_component_assignment(
+        self, train: pd.DataFrame, eps_m: float
+    ) -> dict[tuple[int, str], int]:
+        return dbscan_component_assignment(
+            train,
+            eps_m,
+            int(self.config["task"]["dbscan_min_samples"]),
+        )
 
     def evaluate_native_predictions(
         self, native: pd.DataFrame, truth: pd.DataFrame, catalogue: pd.DataFrame

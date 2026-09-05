@@ -15,8 +15,8 @@ from torch import nn
 from torch.nn.utils.rnn import pack_padded_sequence
 from torch.utils.data import DataLoader, Dataset
 
-from destination_prediction.catalogue import build_catalogue, endpoint_cluster_map
-from destination_prediction.context import RunContext, implementation_constants
+from destination_prediction.catalogue import build_catalogue, endpoint_catalogue_assignment
+from destination_prediction.context import RunContext, implementation_constants, parse_run_context
 from destination_prediction.data import add_local_sequences, load_marked, partitions, user_origins
 from destination_prediction.geometry import prefix_cutoff
 from destination_prediction.metrics import evaluate_native_predictions, selection_summary
@@ -157,7 +157,7 @@ def class_tables(train: pd.DataFrame, catalog: pd.DataFrame):
         for row in catalog.sort_values(["user_id", "center_id"]).itertuples(index=False)
     ]
     class_index = {key: idx for idx, key in enumerate(keys)}
-    cluster_map = endpoint_cluster_map(train, catalog)
+    cluster_map = endpoint_catalogue_assignment(train, catalog)
     labels = {
         trip_key: class_index[(trip_key[0], center_id)]
         for trip_key, center_id in cluster_map.items()
@@ -182,7 +182,7 @@ def train_epoch(model, loader, optimizer, class_user_index, gradient_norm_clip: 
         logits = model(features, lengths, users, class_user_index)
         loss = nn.functional.cross_entropy(logits, targets)
         if not torch.isfinite(loss):
-            raise FloatingPointError("Non-finite BiGRU loss")
+            raise FloatingPointError("Non-finite recurrent-classifier loss")
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), gradient_norm_clip)
         optimizer.step()
@@ -244,7 +244,7 @@ def selected_configuration(
     fixed = config["selection"].get("fixed_configs")
     if fixed is not None:
         return {
-            **fixed["bigru"],
+            **fixed["recurrent"],
             "selection_source": "frozen 30-user discovery validation",
             "outer_test_read": False,
         }
@@ -303,7 +303,7 @@ def selected_configuration(
                             validation_dataset,
                             class_users,
                             centers,
-                            "bigru_destination_classifier",
+                            "recurrent_destination_classifier",
                             config_id,
                             selection_seed,
                             int(cfg["batch_size"]),
@@ -343,11 +343,12 @@ def selected_configuration(
 
 def run(context: RunContext) -> dict[str, object]:
     config = context.config
-    output = context.run_directory / "outputs" / "bigru"
+    context.require_fixed_configurations_match()
+    output = context.run_directory / "outputs" / "recurrent"
     output.mkdir(parents=True, exist_ok=True)
     marked = load_marked(context.run_directory)
     ratios = list(map(float, config["task"]["observation_ratios"]))
-    cfg = implementation_constants(config, "bigru_destination_classifier")
+    cfg = implementation_constants(config, "recurrent_destination_classifier")
     selected = selected_configuration(output, marked, ratios, cfg, config)
     (output / "selected_config.json").write_text(
         json.dumps(selected, indent=2) + "\n", encoding="utf-8"
@@ -392,7 +393,7 @@ def run(context: RunContext) -> dict[str, object]:
                 test_dataset,
                 class_users,
                 centers,
-                "bigru_destination_classifier",
+                "recurrent_destination_classifier",
                 str(selected["config_id"]),
                 seed,
                 int(cfg["batch_size"]),
@@ -425,7 +426,7 @@ def run(context: RunContext) -> dict[str, object]:
 
 
 def main() -> int:
-    summary = run(RunContext.from_environment())
+    summary = run(parse_run_context(description=__doc__))
     print(json.dumps(summary, indent=2), flush=True)
     return 0
 

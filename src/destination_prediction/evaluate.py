@@ -10,8 +10,8 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from destination_prediction.catalogue import build_catalogue
-from destination_prediction.context import RunContext
+from destination_prediction.catalogue import build_catalogue, catalogue_assignment_audit
+from destination_prediction.context import RunContext, parse_run_context
 from destination_prediction.data import load_marked, partitions
 from destination_prediction.metrics import evaluate_native_predictions
 
@@ -20,7 +20,7 @@ PRINCIPAL = [
     "geometric_retrieval",
     "probabilistic_grid_pattern_retrieval",
     "tsmini",
-    "bigru",
+    "recurrent",
 ]
 BASELINES = [
     "most_frequent_personal_destination",
@@ -51,7 +51,7 @@ def normalize_input(frame: pd.DataFrame) -> pd.DataFrame:
         "geometric_retrieval": "geometric_retrieval",
         "probabilistic_grid_pattern_retrieval": "probabilistic_grid_pattern_retrieval",
         "tsmini_retrieval": "tsmini",
-        "bigru_destination_classifier": "bigru",
+        "recurrent_destination_classifier": "recurrent",
     }
     out["method"] = out["family"].map(mapping).fillna(out["config_id"])
     out["seed"] = pd.to_numeric(out["seed"], errors="coerce").fillna(-1).astype(int)
@@ -62,7 +62,7 @@ def normalize_input(frame: pd.DataFrame) -> pd.DataFrame:
 def load_predictions(run_directory: Path) -> pd.DataFrame:
     frames = [
         normalize_input(pd.read_csv(run_directory / "outputs/non_neural/test_predictions.csv")),
-        normalize_input(pd.read_csv(run_directory / "outputs/bigru/test_predictions_by_seed.csv")),
+        normalize_input(pd.read_csv(run_directory / "outputs/recurrent/test_predictions_by_seed.csv")),
         normalize_input(pd.read_csv(run_directory / "outputs/tsmini/test_predictions_by_seed.csv")),
     ]
     return pd.concat(frames, ignore_index=True)
@@ -292,6 +292,7 @@ def run(context: RunContext) -> dict[str, object]:
     }
     evaluated_frames = []
     catalogs = []
+    assignment_audit: dict[str, object] | None = None
     for eps_m in map(float, config["evaluation"]["dbscan_eps_sensitivity_m"]):
         catalog = build_catalogue(
             train,
@@ -300,6 +301,13 @@ def run(context: RunContext) -> dict[str, object]:
             int(config["task"]["dbscan_min_samples"]),
         )
         catalogs.append(catalog)
+        if eps_m == float(config["task"]["primary_dbscan_eps_m"]):
+            assignment_audit = catalogue_assignment_audit(
+                train,
+                catalog,
+                eps_m,
+                int(config["task"]["dbscan_min_samples"]),
+            )
         evaluated = evaluate_native_predictions(
             native,
             test,
@@ -315,6 +323,11 @@ def run(context: RunContext) -> dict[str, object]:
         ]
         evaluated_frames.append(evaluated)
     evaluated = pd.concat(evaluated_frames, ignore_index=True)
+    if assignment_audit is None:
+        raise RuntimeError("Primary destination catalogue was not constructed")
+    (output / "catalogue_assignment_audit.json").write_text(
+        json.dumps(assignment_audit, indent=2) + "\n", encoding="utf-8"
+    )
     pd.concat(catalogs, ignore_index=True).to_csv(
         output / "outer_training_destination_catalogs.csv", index=False
     )
@@ -372,7 +385,7 @@ def run(context: RunContext) -> dict[str, object]:
 
 
 def main() -> int:
-    audit = run(RunContext.from_environment())
+    audit = run(parse_run_context(description=__doc__))
     print(json.dumps(audit, indent=2), flush=True)
     return 0
 

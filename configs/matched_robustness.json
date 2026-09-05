@@ -9,6 +9,12 @@
     "elapsed_time",
     "cumulative_distance"
   ],
+  "destination_assignment_sensitivity": {
+    "primary": "nearest_medoid",
+    "alternative": "original_dbscan_component_membership",
+    "scope": "held_out_37 point_count",
+    "status": "post-hoc sensitivity analysis"
+  },
   "methods": {
     "full": "grid_full_prefix",
     "last": "grid_last_state_only"
@@ -31,6 +37,7 @@
     "quality": "The predefined recording-gap, timestamp-order, and implied-speed eligibility flag is reused without changing a threshold.",
     "expanded_cohort": "The 46-user cohort is the previously analysed union of the 37 evaluation users and nine preliminary users; it is a sensitivity cohort, not an independent replication.",
     "tie_rule": "Equal-distance candidates are ordered by immutable source trajectory ID; no endpoint outcome determines the order.",
+    "destination_assignment": "The sensitivity replaces only the second-stage nearest-medoid label of each training candidate with its original DBSCAN component; catalogue medoids, empirical supports, retrieval distances, candidate pool, tie rules, scoring, and saved bootstrap plan remain fixed.",
     "bootstrap": "The exact saved resample plan is reused whenever all 37-user cases are retained. Quality and 46-user analyses use the same 10000-replicate hierarchy with fixed seeds."
   }
 }

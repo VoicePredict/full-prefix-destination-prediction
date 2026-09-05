@@ -9,7 +9,7 @@
       "rows": 69312,
       "unique_cases": 2888
     },
-    "bigru": {
+    "recurrent": {
       "rows": 57760,
       "unique_cases": 2888
     },

@@ -1,0 +1,16 @@
+{
+  "catalogue_construction": "personal training-endpoint DBSCAN",
+  "candidate_and_class_assignment": "nearest catalogue medoid",
+  "catalog_eps_m": 200.0,
+  "training_endpoints": 4370,
+  "users": 37,
+  "catalogue_regions": 1170,
+  "reassigned_training_endpoints": 66,
+  "reassigned_training_endpoint_fraction": 0.015102974828375286,
+  "assignments_different_from_original_dbscan_component": 66,
+  "users_with_at_least_one_reassignment": 12,
+  "affected_catalogue_regions": 44,
+  "audit_statement": "66/4,370 training endpoints were reassigned from their original DBSCAN component to the nearest frozen catalogue medoid.",
+  "reported_results_assignment": "nearest frozen catalogue medoid",
+  "sensitivity_assignment": "original ordered DBSCAN component"
+}

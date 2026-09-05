@@ -159,6 +159,5 @@
   },
   "manual_segmentation": false,
   "row_level_mode_filtering": false,
-  "source_file_retained_as_indivisible_unit": true,
-  "trip_pickle_sha256": "dc4827e58133497747b84dc8ecd4807473fd8c670d387a9aa0c47d47af9e74fb"
+  "source_file_retained_as_indivisible_unit": true
 }

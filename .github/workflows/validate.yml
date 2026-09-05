@@ -1,0 +1,82 @@
+name: Validate reproducibility artifact
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: artifact-validation-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Frozen results, tests, and reporting
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            constraints.txt
+
+      - name: Install validation dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install --constraint constraints.txt \
+            numpy==2.0.2 \
+            pandas==2.3.3 \
+            psutil==7.2.2 \
+            scikit-learn==1.6.1 \
+            scipy==1.13.1
+          python -m pip install --no-deps --editable .
+
+      - name: Verify frozen protocol and claims
+        run: python scripts/reproduce.py verify
+
+      - name: Run scientific and artifact unit tests
+        run: python -m unittest discover -s tests -v
+
+      - name: Regenerate and compare paper outputs
+        run: |
+          generated="$RUNNER_TEMP/generated-results"
+          python scripts/reproduce.py results \
+            --bundle-root reference \
+            --output-root "$generated"
+          diff --recursive --unified --exclude=.gitkeep \
+            results/paper_tables "$generated/paper_tables"
+          diff --recursive --unified --exclude=.gitkeep \
+            results/figures "$generated/figures"
+
+      - name: Repeat reviewer checks from a path containing spaces
+        run: |
+          copied="$RUNNER_TEMP/reviewer copy/full-prefix destination prediction"
+          generated="$RUNNER_TEMP/moved-generated-results"
+          mkdir -p "$copied"
+          git archive --format=tar HEAD | tar -xf - -C "$copied"
+          cd "$copied"
+          python -m pip install --no-deps --editable .
+          python scripts/reproduce.py verify
+          python -m unittest discover -s tests -v
+          python scripts/reproduce.py full \
+            --data-root "$RUNNER_TEMP/GeoLife input with spaces" \
+            --output-root "$RUNNER_TEMP/run output with spaces" \
+            --dry-run
+          python scripts/reproduce.py results \
+            --bundle-root reference \
+            --output-root "$generated"
+          diff --recursive --unified --exclude=.gitkeep \
+            results/paper_tables "$generated/paper_tables"
+          diff --recursive --unified --exclude=.gitkeep \
+            results/figures "$generated/figures"
