@@ -1,7 +1,7 @@
 # When Does Full-Prefix Geometry Matter?
 
 Reproducibility artifact for *When Does Full-Prefix Geometry Matter for
-Personal Trajectory Endpoint Prediction? A Leakage-Controlled Multi-Ratio
+Personal Destination Prediction? A Leakage-Controlled Multi-Ratio
 Evaluation*.
 
 ## Reviewer path
