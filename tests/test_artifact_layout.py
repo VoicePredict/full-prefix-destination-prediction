@@ -144,6 +144,13 @@ class ArtifactLayoutTests(unittest.TestCase):
         }
         self.assertEqual(listed, expected)
 
+    def test_ci_uses_published_precision_output_comparison(self) -> None:
+        workflow = (ROOT / ".github" / "workflows" / "validate.yml").read_text(
+            encoding="utf-8"
+        )
+        self.assertEqual(workflow.count("--compare-to results"), 2)
+        self.assertNotIn("diff --recursive", workflow)
+
     def test_run_registry_matches_orchestrator_and_configs(self) -> None:
         registry = json.loads(
             (ROOT / "reference" / "manifests" / "run_registry.json").read_text()

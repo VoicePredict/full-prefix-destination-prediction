@@ -53,11 +53,8 @@ jobs:
           generated="$RUNNER_TEMP/generated-results"
           python scripts/reproduce.py results \
             --bundle-root reference \
-            --output-root "$generated"
-          diff --recursive --unified --exclude=.gitkeep \
-            results/paper_tables "$generated/paper_tables"
-          diff --recursive --unified --exclude=.gitkeep \
-            results/figures "$generated/figures"
+            --output-root "$generated" \
+            --compare-to results
 
       - name: Repeat reviewer checks from a path containing spaces
         run: |
@@ -75,8 +72,5 @@ jobs:
             --dry-run
           python scripts/reproduce.py results \
             --bundle-root reference \
-            --output-root "$generated"
-          diff --recursive --unified --exclude=.gitkeep \
-            results/paper_tables "$generated/paper_tables"
-          diff --recursive --unified --exclude=.gitkeep \
-            results/figures "$generated/figures"
+            --output-root "$generated" \
+            --compare-to results

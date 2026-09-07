@@ -334,6 +334,36 @@ class ReproductionBundleTests(unittest.TestCase):
             self.assertTrue(report["differences"])
             self.assertIn("estimate", report["differences"][0]["message"])
 
+    def test_cross_platform_float_serialization_is_equivalent(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary_name:
+            temporary = Path(temporary_name)
+            frozen = temporary / "frozen" / "paper_tables"
+            candidate = temporary / "candidate" / "paper_tables"
+            frozen.mkdir(parents=True)
+            candidate.mkdir(parents=True)
+            pd.DataFrame(
+                [
+                    {
+                        "method": "probabilistic_grid_pattern_retrieval",
+                        "ratio": 0.75,
+                        "estimate": 46.800463235028474,
+                    }
+                ]
+            ).to_csv(frozen / "main_hit_r90.csv", index=False)
+            pd.DataFrame(
+                [
+                    {
+                        "method": "probabilistic_grid_pattern_retrieval",
+                        "ratio": 0.75,
+                        "estimate": 46.80046323502848,
+                    }
+                ]
+            ).to_csv(candidate / "main_hit_r90.csv", index=False)
+
+            report = artifact.compare_paper_outputs(candidate.parent, frozen.parent)
+            self.assertEqual(report["status"], "passed")
+            self.assertEqual(report["files_compared"], 1)
+
     def test_entropy_comparison_uses_three_published_digits(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_name:
             temporary = Path(temporary_name)

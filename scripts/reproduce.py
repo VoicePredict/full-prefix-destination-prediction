@@ -718,6 +718,14 @@ def parser() -> argparse.ArgumentParser:
         default=ROOT / "results",
         help="Root receiving paper_tables/ and figures/.",
     )
+    reporting.add_argument(
+        "--compare-to",
+        type=Path,
+        help=(
+            "Optional frozen paper-output root. Generated CSV values are "
+            "compared at their published precision and figures byte-for-byte."
+        ),
+    )
     setup = subparsers.add_parser(
         "setup", help="Download and install GeoLife 1.3 and pinned TSMini."
     )
@@ -816,6 +824,15 @@ def main() -> int:
             cwd=ROOT,
             check=True,
         )
+        if args.compare_to is not None:
+            from destination_prediction.artifact import compare_paper_outputs
+
+            frozen_root = args.compare_to.expanduser().resolve()
+            report = compare_paper_outputs(output_root, frozen_root)
+            print(
+                f"Verified {report['files_compared']} paper outputs against "
+                f"{frozen_root} at published precision."
+            )
         return 0
     if args.command == "setup":
         if args.component in {"all", "geolife"}:
