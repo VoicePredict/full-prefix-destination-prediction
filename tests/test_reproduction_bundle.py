@@ -16,6 +16,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
 from destination_prediction import artifact  # noqa: E402
+from scripts import generate_figures  # noqa: E402
 
 
 class ReproductionBundleTests(unittest.TestCase):
@@ -363,6 +364,28 @@ class ReproductionBundleTests(unittest.TestCase):
             report = artifact.compare_paper_outputs(candidate.parent, frozen.parent)
             self.assertEqual(report["status"], "passed")
             self.assertEqual(report["files_compared"], 1)
+
+    def test_user_effect_figure_breaks_equal_effects_by_user_id(self) -> None:
+        rows = pd.DataFrame(
+            [
+                {"user_id": 9, "ratio": 0.25, "paired_effect": 0.0},
+                {"user_id": 9, "ratio": 0.75, "paired_effect": -0.1},
+                {"user_id": 3, "ratio": 0.25, "paired_effect": 0.0},
+                {"user_id": 3, "ratio": 0.75, "paired_effect": 0.2},
+                {"user_id": 7, "ratio": 0.25, "paired_effect": -0.1},
+                {"user_id": 7, "ratio": 0.75, "paired_effect": 0.0},
+            ]
+        )
+        reversed_rows = rows.iloc[::-1].reset_index(drop=True)
+
+        expected = [7, 3, 9]
+        self.assertEqual(
+            generate_figures.ordered_user_effects(rows).index.tolist(), expected
+        )
+        self.assertEqual(
+            generate_figures.ordered_user_effects(reversed_rows).index.tolist(),
+            expected,
+        )
 
     def test_entropy_comparison_uses_three_published_digits(self) -> None:
         with tempfile.TemporaryDirectory() as temporary_name:

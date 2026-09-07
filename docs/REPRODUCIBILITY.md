@@ -47,6 +47,8 @@ The initial matched-ablation pass is retained because it supplies the exact
 - Bootstrap draws preserve complete four-ratio case vectors.
 - The last-state ablation changes only whether preceding aligned states enter
   the grid distance.
+- The user-effect figure is ordered by the 25% effect, with numeric user ID as
+  the deterministic tie-breaker.
 
 ## Run outputs
 

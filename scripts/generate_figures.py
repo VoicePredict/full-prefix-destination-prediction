@@ -362,10 +362,16 @@ def observation_ratio_figure() -> None:
     (OUT / "observation_ratio_contrast.svg").write_text("\n".join(parts), encoding="utf-8")
 
 
+def ordered_user_effects(data: pd.DataFrame) -> pd.DataFrame:
+    """Order users by the 25% effect, using user ID to resolve equal effects."""
+
+    wide = data.pivot(index="user_id", columns="ratio", values="paired_effect")
+    return wide.sort_index().sort_values(0.25, kind="mergesort")
+
+
 def user_effect_figure() -> None:
     data = pd.read_csv(MATCHED_DIAGNOSTIC / "matched_user_effects.csv")
-    wide = data.pivot(index="user_id", columns="ratio", values="paired_effect")
-    wide = wide.sort_values(0.25)
+    wide = ordered_user_effects(data)
 
     width, height = 460, 300
     left, top, plot_width, plot_height = 68, 25, 365, 210
